@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>BouncyBall06.SolveFloors</title>
+  </head>
+	<!--	Create the HTML5 'canvas' element in which we will run WebGL
+	-->
+  <body onload="main()">
+    <canvas id="webgl" width="600" height="600">
+    	Please use a browser that supports "canvas"
+    </canvas> 
+	<br> 
+	<b>Particle System Controls:</b> 
+  <br>
+  <b>r/R key:</b> add random speed. 
+  <b>Space-bar:</b> single-step.    
+  <b>p or P key:</b> pause/resume.	
+	<br>
+  <b>c or C key:</b> toggle clear-screen. 
+  <b>f or F key:</b> toggle fountain effect.
+  <br> 
+	<!-- <b>d/D key:</b> less/more drag.   -->
+  <!-- <b>g/G key:</b> less/more gravity <br> -->
+  <!-- <b>s or S: switch solvers</b> (implicit vs. explicit)  -->
+  
+  <!-- <b>b or B:</b> floor-bounce method -->
+	<!-- <p>
+		<div id='KeyResult'> try it... </div>
+		<div id='MouseResult0'> Then look here... </div> 
+		<div id='MouseResult1'> And look here too... </div>
+  </p> -->
+  <p>
+    <b>'JKLI'</b> keys to change camera lookat directions. <br>
+    <b>'+-'</b> keys to go forward or backward. <br>
+    <b>Arrow</b> keys to move camera positions.
+  </p>
+    <script src="./lib/webgl-utils.js"></script>
+    <script src="./lib/webgl-debug.js"></script>
+    <script src="./lib/cuon-utils.js"></script>
+    <script src="./lib/cuon-matrix-quat03.js"></script>
+    <script src="./js/CPartSys.js"></script>
+    <script src="./js/CPart.js"></script>
+    <script src="./js/CForcer.js"></script>
+    <script src="./js/CWall.js"></script>
+    <script src="./js/VBO-Lib.js"></script>
+    <script src="./js/StateSpaceBouncyBall3D.js"></script>
+
+  </body>
+</html>

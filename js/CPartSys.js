@@ -1,8 +1,8 @@
 SOLV_EULER = 0;
 SOLV_IMPLICIT = 1;
-SOLV_MIDPOINT = 3;
+SOLV_MIDPOINT = 2;
 SOLV_MAX = 3;
-solverType = SOLV_IMPLICIT;
+solverType = SOLV_MIDPOINT;
 isFountain = 0;
 
 class CPartSys {
@@ -47,31 +47,33 @@ class CPartSys {
         // Do all initializations here
         for (var i = 0, j = 0; i < this.partCount; i++, j += PART_MAXVAR){  // init mass
             this.S0[j + PTYPE_DEAD] = 2;
-            this.S0[j + PART_MASS] = 1.0;
-            this.S0[j + PART_XPOS] = 1.5*(Math.random()-0.5);
-            this.S0[j + PART_YPOS] =  1.5*(Math.random()-0.5);
-            this.S0[j + PART_ZPOS] =  0.0;
-            this.S0[j + PART_WPOS] =  1.0;
-            this.S0[j + PART_XVEL] =  0.0;
-            this.S0[j + PART_YVEL] =  0.0;
-            this.S0[j + PART_ZVEL] =  0.0;
-            this.S0[j + PART_X_FTOT] =  0.0;
-            this.S0[j + PART_Y_FTOT] =  0.0;
-            this.S0[j + PART_Z_FTOT] =  0.0;
-            this.S0[j + PART_MAXAGE] =  30 + 100*Math.random();
-            this.S0[j + PART_AGE] =  this.S0[j + PART_MAXAGE];
-            this.S0[j + PART_MASS_VEL] =  0.0;
-            this.S0[j + PART_MASS_FTOT] =  0.0;
-            this.S0[j + PART_R] =  1.0;
-            this.S0[j + PART_G] =  0.0;
-            this.S0[j + PART_B] =  0.0;
+            this.S0[j + PART_MASS] = 1 + Math.random()*2;
+            this.S0[j + PART_XPOS] = 1.5 * (Math.random()-0.5);
+            this.S0[j + PART_YPOS] = 1.5 * (Math.random()-0.5);
+            this.S0[j + PART_ZPOS] = 0.0;
+            this.S0[j + PART_WPOS] = 1.0;
+            this.S0[j + PART_XVEL] = 0.0;
+            this.S0[j + PART_YVEL] = 0.0;
+            this.S0[j + PART_ZVEL] = 0.0;
+            this.S0[j + PART_X_FTOT] = 0.0;
+            this.S0[j + PART_Y_FTOT] = 0.0;
+            this.S0[j + PART_Z_FTOT] = 0.0;
+            this.S0[j + PART_MAXAGE] = 30 + 100*Math.random();
+            this.S0[j + PART_AGE] = this.S0[j + PART_MAXAGE];
+            this.S0[j + PART_MASS_VEL] = 0.0;
+            this.S0[j + PART_MASS_FTOT] = 0.0;
+            this.S0[j + PART_R] = 1.0;
+            this.S0[j + PART_G] = 0.0;
+            this.S0[j + PART_B] = 0.0;
         }
  
         // initialize s1 as a copy from s0
         this.S1.set(this.S0);
+        this.SM.set(this.S0);
 
         // initialize s0dot as a copy from s0 but set all to 0
-        this.S0dot.fill(0, 0, PART_MAXVAR);
+        this.S0dot.fill(0);
+        this.SMdot.fill(0);
         
         this.solvType = solverType;
         // initialize f0, the list of CForcer for s0
@@ -103,7 +105,7 @@ class CPartSys {
         // Do all initializations here
         for (var i = 0, j = 0; i < this.partCount; i++, j += PART_MAXVAR){
             this.S0[j + PTYPE_DEAD] = 1;
-            this.S0[j + PART_MASS] = Math.random() * 2;
+            this.S0[j + PART_MASS] = 1;
             this.S0[j + PART_XPOS] = 0;
             this.S0[j + PART_YPOS] = 0.0;
             this.S0[j + PART_ZPOS] = 0.0;
@@ -141,9 +143,11 @@ class CPartSys {
 
         // initialize s1 as a copy from s0
         this.S1.set(this.S0);
+        this.SM.set(this.S0);
 
         // initialize s0dot as a copy from s0 but set all to 0
-        this.S0dot.fill(0, 0, PART_MAXVAR);
+        this.S0dot.fill(0);
+        this.SMdot.fill(0);
 
         this.solvType = SOLV_IMPLICIT;
         
@@ -173,7 +177,7 @@ class CPartSys {
         }
 
         // Step through the forcers. Accumulate all forces.
-        for (j = 0; j < this.forcerCount; j++){
+        for (var j = 0; j < this.forcerCount; j++){
             switch(F[j].forceType){
                 case -F_GRAV_E:  // disabled gravity. Do nothing.
                     break;
@@ -245,7 +249,7 @@ class CPartSys {
      * @param {Float32Array} S0 Current state vector
      */
     dotMaker(S0dot, S0){
-        for (i = 0; i < this.partCount; i++){  // For every particle
+        for (var i = 0; i < this.partCount; i++){  // For every particle
             
             S0dot[i * PART_MAXVAR + PART_XPOS] = S0[i * PART_MAXVAR + PART_XVEL];
             S0dot[i * PART_MAXVAR + PART_YPOS] = S0[i * PART_MAXVAR + PART_YVEL];
@@ -273,7 +277,7 @@ class CPartSys {
         switch (this.solvType){
             case SOLV_EULER:
                 var k = 0;
-                for (i = 0; i < this.partCount; i++, k += PART_MAXVAR){
+                for (var i = 0; i < this.partCount; i++, k += PART_MAXVAR){
                     S1[k + PART_XPOS] = S0[k + PART_XPOS] + S0dot[k + PART_XPOS] * timeStep * 0.001;
                     S1[k + PART_YPOS] = S0[k + PART_YPOS] + S0dot[k + PART_YPOS] * timeStep * 0.001;
                     S1[k + PART_ZPOS] = S0[k + PART_ZPOS] + S0dot[k + PART_ZPOS] * timeStep * 0.001;
@@ -284,7 +288,7 @@ class CPartSys {
                 }
                 break;
             case SOLV_IMPLICIT:
-                for (i = 0; i < this.partCount; i++){
+                for (var i = 0; i < this.partCount; i++){
                     // IMPLICIT. Compute pos & vel for new state vector
                     S1[i * PART_MAXVAR + PART_XVEL] = S0[i * PART_MAXVAR + PART_XVEL] + S0dot[i * PART_MAXVAR + PART_XVEL]* timeStep *0.001;
                     S1[i * PART_MAXVAR + PART_YVEL] = S0[i * PART_MAXVAR + PART_YVEL] + S0dot[i * PART_MAXVAR + PART_YVEL]* timeStep *0.001;
@@ -295,8 +299,11 @@ class CPartSys {
                 }
                 break;
             case SOLV_MIDPOINT:
-                var k = 0;
-                for (i = 0; i < this.partCount; i++, k += PART_MAXVAR){
+                for (var i = 0, k = 0; i < this.partCount; i++, k += PART_MAXVAR){
+                    // Clear SM and SMdot
+                    this.SM.set(S0);
+                    this.SMdot.fill(0);
+
                     // Use Euler to find midpoint.
                     this.SM[k + PART_XPOS] = S0[k + PART_XPOS] + S0dot[k + PART_XPOS] * timeStep/2 * 0.001;
                     this.SM[k + PART_YPOS] = S0[k + PART_YPOS] + S0dot[k + PART_YPOS] * timeStep/2 * 0.001;
@@ -331,14 +338,14 @@ class CPartSys {
      */
     doConstraints(S2, S1, W){
         // step through constraints
-        for (j = 0; j < this.wallCount; j++){
+        for (var j = 0; j < this.wallCount; j++){
             if (W[j].partSetSize == 0){  // limit applied on all particles
                 
                     // debugger;
 
                     switch(W[j].wallType){  
                         case WTYPE_GROUND:
-                            for (i = 0; i < this.partCount; i++){
+                            for (var i = 0; i < this.partCount; i++){
                             if (S2[i * PART_MAXVAR + PART_ZPOS] < W[j].zmin && S2[i * PART_MAXVAR + PART_ZVEL] < 0.0){  // To be edited
                                 S2[i * PART_MAXVAR + PART_ZPOS] = W[j].zmin;
                                 S2[i * PART_MAXVAR + PART_ZVEL] = 0.985*S1[i * PART_MAXVAR + PART_ZVEL];
@@ -351,7 +358,7 @@ class CPartSys {
                             break;
 
                         case WTYPE_YWALL_LO:
-                            for (i = 0; i < this.partCount; i++){
+                            for (var i = 0; i < this.partCount; i++){
                             if (S2[i * PART_MAXVAR + PART_YPOS] < W[j].ymin && S2[i * PART_MAXVAR + PART_YVEL] < 0.0){  // collision
                                 S2[i * PART_MAXVAR + PART_YPOS] = W[j].ymin;
                                 S2[i * PART_MAXVAR + PART_YVEL] = S1[i * PART_MAXVAR + PART_YVEL]; // Still apply drag??
@@ -364,7 +371,7 @@ class CPartSys {
                             break;
 
                         case WTYPE_YWALL_HI:
-                            for (i = 0; i < this.partCount; i++){
+                            for (var i = 0; i < this.partCount; i++){
                             if (S2[i * PART_MAXVAR + PART_YPOS] > W[j].ymax && S2[i * PART_MAXVAR + PART_YVEL] > 0.0){
                                 S2[i * PART_MAXVAR + PART_YPOS] = W[j].ymax;
                                 S2[i * PART_MAXVAR + PART_YVEL] = S1[i * PART_MAXVAR + PART_YVEL];
@@ -377,7 +384,7 @@ class CPartSys {
                             break;
 
                         case WTYPE_XWALL_LO:
-                            for (i = 0; i < this.partCount; i++){
+                            for (var i = 0; i < this.partCount; i++){
                             if (S2[i * PART_MAXVAR + PART_XPOS] < W[j].xmin && S2[i * PART_MAXVAR + PART_XVEL] < 0.0){
                                 S2[i * PART_MAXVAR + PART_XPOS] = W[j].xmin;
                                 S2[i * PART_MAXVAR + PART_XVEL] = S1[i * PART_MAXVAR + PART_XVEL];
@@ -390,7 +397,7 @@ class CPartSys {
                             break;
 
                         case WTYPE_XWALL_HI:
-                            for (i = 0; i < this.partCount; i++){
+                            for (var i = 0; i < this.partCount; i++){
                             if (S2[i * PART_MAXVAR + PART_XPOS] > W[j].xmax && S2[i * PART_MAXVAR + PART_XVEL] > 0.0){
                                 S2[i * PART_MAXVAR + PART_XPOS] = W[j].xmax;
                                 S2[i * PART_MAXVAR + PART_XVEL] = S1[i * PART_MAXVAR + PART_XVEL];
@@ -403,7 +410,7 @@ class CPartSys {
                             break;
 
                         case WTYPE_ZWALL_LO:
-                            for (i = 0; i < this.partCount; i++){
+                            for (var i = 0; i < this.partCount; i++){
                             if (S2[i * PART_MAXVAR + PART_ZPOS] < W[j].zmin && S2[i * PART_MAXVAR + PART_ZVEL] < 0.0){  // To be edited
                                 S2[i * PART_MAXVAR + PART_ZPOS] = W[j].zmin;
                                 S2[i * PART_MAXVAR + PART_ZVEL] = S1[i * PART_MAXVAR + PART_ZVEL];
@@ -416,7 +423,7 @@ class CPartSys {
                             break;
 
                         case WTYPE_ZWALL_HI:
-                            for (i = 0; i < this.partCount; i++){
+                            for (var i = 0; i < this.partCount; i++){
                             if (S2[i * PART_MAXVAR + PART_ZPOS] > W[j].zmax && S2[i * PART_MAXVAR + PART_ZVEL] > 0.0){
                                 S2[i * PART_MAXVAR + PART_ZPOS] = W[j].zmax;
                                 S2[i * PART_MAXVAR + PART_ZVEL] = S1[i * PART_MAXVAR + PART_ZVEL];
@@ -436,7 +443,7 @@ class CPartSys {
                             break;
                         case WTYPE_AGE:
                             if (isFountain){
-                                for (i = 0; i < this.partCount; i++){
+                                for (var i = 0; i < this.partCount; i++){
                                     S2[i * PART_MAXVAR + PART_AGE] = S1[i * PART_MAXVAR + PART_AGE] - 1; //????????
                                     if (S2[i * PART_MAXVAR + PART_AGE] < 0.5 * S2[i * PART_MAXVAR + PART_MAXAGE]){
                                         S2[i * PART_MAXVAR + PART_R] = 0.0;

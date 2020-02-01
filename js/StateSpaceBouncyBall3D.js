@@ -424,19 +424,19 @@ function myKeyDown(ev) {
             var pSys = partBox1.pSys;
             for (i = 0; i < pSys.partCount; i++){
                 if (pSys.S0[i * PART_MAXVAR + PART_XVEL] > 0.0){
-                    pSys.S0[i * PART_MAXVAR + PART_XVEL] += (Math.random()+1) * 10;
+                    pSys.S0[i * PART_MAXVAR + PART_XVEL] += (Math.random()+1) * 2;
                 }else{
-                    pSys.S0[i * PART_MAXVAR + PART_XVEL] -= (Math.random()+1) * 10;
+                    pSys.S0[i * PART_MAXVAR + PART_XVEL] -= (Math.random()+1) * 2;
                 }
                 if (pSys.S0[i * PART_MAXVAR + PART_YVEL] > 0.0){
-                    pSys.S0[i * PART_MAXVAR + PART_YVEL] += (Math.random()+1) * 10;  // Also g_drag should be applied??
+                    pSys.S0[i * PART_MAXVAR + PART_YVEL] += (Math.random()+1) * 2;  // Also g_drag should be applied??
                 }else{
-                    pSys.S0[i * PART_MAXVAR + PART_YVEL] -= (Math.random()+1) * 10;
+                    pSys.S0[i * PART_MAXVAR + PART_YVEL] -= (Math.random()+1) * 2;
                 }
                 if (pSys.S0[i * PART_MAXVAR + PART_ZVEL] > 0.0){
-                    pSys.S0[i * PART_MAXVAR + PART_ZVEL] += (Math.random()+1) * 10;
+                    pSys.S0[i * PART_MAXVAR + PART_ZVEL] += (Math.random()+1) * 2;
                 }else{
-                    pSys.S0[i * PART_MAXVAR + PART_ZVEL] -= (Math.random()+1) * 10;
+                    pSys.S0[i * PART_MAXVAR + PART_ZVEL] -= (Math.random()+1) * 2;
                 }
             }
             break;

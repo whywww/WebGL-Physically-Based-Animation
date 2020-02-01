@@ -18,14 +18,15 @@ PART_X_FTOT = 9;
 PART_Y_FTOT = 10;
 PART_Z_FTOT = 11;
 
-PART_AGE = 12;  // # of frame-times since creation/initialization
-PART_MASS_VEL = 13;
-PART_MASS_FTOT = 14;
+PART_MAXAGE = 12
+PART_AGE = 13;  // # of frame-times since creation/initialization
+PART_MASS_VEL = 14;
+PART_MASS_FTOT = 15;
 
-PART_R = 15;
-PART_G = 16;
-PART_B = 17;
-PART_MAXVAR = 18;
+PART_R = 16;
+PART_G = 17;
+PART_B = 18;
+PART_MAXVAR = 19;
 
 class CPart{
     partType;   // Particle type; not required, but a) helps you

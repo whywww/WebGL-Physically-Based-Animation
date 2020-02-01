@@ -6,7 +6,10 @@ WTYPE_YWALL_LO = 4;
 WTYPE_YWALL_HI = 5;
 WTYPE_ZWALL_LO = 6
 WTYPE_ZWALL_HI = 7;
-WTYPE_MAXVAR = 8;     
+WTYPE_ANCHOR = 8;       // Lock one particle at location xpos,ypos,zpos
+WTYPE_STICK = 9;
+WTYPE_AGE = 10;
+WTYPE_MAXVAR = 11;     
 
 var ballRadius = 0.07;  // radius of ball
 

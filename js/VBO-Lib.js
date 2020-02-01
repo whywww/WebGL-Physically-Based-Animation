@@ -183,7 +183,7 @@ function VBObox2(){
     'varying vec4 v_Color; \n' +
 
     'void main() {\n' +
-    '   gl_PointSize = 20.0;\n' + 
+    '   gl_PointSize = 10.0;\n' + 
     '   gl_Position = u_ModelMatrix * a_Position; \n' +
     '	v_Color = vec4(a_Color, 1.0); \n' +	
     '} \n';
@@ -201,14 +201,14 @@ function VBObox2(){
     '		}\n' +
     '}\n';
     // initiate particle system
-    pSys = new CPartSys();
-    var partCount = 100;
-    var forces = [F_GRAV_E, F_DRAG];
-    var walls = [WTYPE_YWALL_LO, WTYPE_YWALL_HI, WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_ZWALL_LO, WTYPE_ZWALL_HI];
-    pSys.init(partCount, forces, walls);
+    this.pSys = new CPartSys();
+    this.partCount = 1000;
+    this.forces = [F_GRAV_E, F_DRAG];
+    this.walls = [WTYPE_YWALL_LO, WTYPE_YWALL_HI, WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_ZWALL_LO, WTYPE_ZWALL_HI, WTYPE_AGE];
+    this.pSys.initBouncyBall(this.partCount, this.forces, this.walls);
 
-    this.vboContents = pSys.S0;
-    this.vboVerts = pSys.partCount;
+    this.vboContents = this.pSys.S0;
+    this.vboVerts = this.pSys.partCount;
 	this.FSIZE = this.vboContents.BYTES_PER_ELEMENT;
     this.vboBytes = this.vboContents.length * this.FSIZE;
     this.vboStride = this.vboBytes / this.vboVerts; 
@@ -301,7 +301,30 @@ VBObox2.prototype.adjust = function() {
 
 VBObox2.prototype.draw = function() {
     this.ModelMat = popMatrix();
-    drawBall(this.ModelMat, this.u_ModelMatLoc);
+    pushMatrix(this.ModelMat);
+    // drawBall(this.ModelMat, this.u_ModelMatLoc);
+    if (runMode > 1){
+        if (runMode == 2) runMode = 1;  // do one step
+         // 1) DotFinder(): Find s0Dot from s0 & f0. 
+         this.pSys.applyAllForces(this.pSys.S0, this.pSys.F0);
+         this.pSys.dotMaker(this.pSys.S0dot, this.pSys.S0, g_timeStep);
+ 
+         //2) Solver(): Find s1 from s0 & s0dot
+         this.pSys.solver(g_timeStep, this.pSys.S0, this.pSys.S0dot, this.pSys.S1);
+ 
+         // 3) Apply all constraints
+         this.pSys.doConstraints(this.pSys.S1, this.pSys.S0, this.pSys.C0);
+     
+         // 4) Render
+         this.pSys.drawMe(this.pSys.S0, this.ModelMat, this.u_ModelMatLoc);
+
+        // 5) Swap
+        [this.pSys.S0, this.pSys.S1] = this.pSys.stateVecSwap(this.pSys.S0, this.pSys.S1);
+
+    }
+    else{  // paused. Only draw current state
+        this.pSys.drawMe(this.pSys.S0, this.ModelMat, this.u_ModelMatLoc);
+    }
 }
 
 VBObox2.prototype.isReady = function() {
@@ -342,8 +365,13 @@ function VBObox3(){
 
     this.FRAG_SRC = 
     'precision mediump float;\n' +
+    
     'varying vec4 v_Color; \n' +
+    'uniform int u_isPoint; \n' +
+
     'void main() {\n' +
+    '   u_isPoint;\n'+
+    '   if (u_isPoint == 1){ \n' +
     '		float dist = distance(gl_PointCoord, vec2(0.5, 0.5)); \n' +
     '		if(dist < 0.5) { \n' +	
     '			gl_FragColor = vec4((1.0-2.0*dist)*v_Color.rgb, 1.0);\n' +
@@ -351,25 +379,32 @@ function VBObox3(){
     '		else { \n' + 
     '			discard;\n' +
     '		}\n' +
+    '   }\n' +
+    '   else if (u_isPoint == 0) {\n'+
+    '       gl_FragColor = v_Color;\n' +
+    '   }\n'+
     '}\n';
-    // initiate particle system
-    pSys = new CPartSys();
-    var partCount = 100;
-    var forces = [F_GRAV_E, F_DRAG];
-    var walls = [WTYPE_YWALL_LO, WTYPE_YWALL_HI, WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_ZWALL_LO, WTYPE_ZWALL_HI];
-    pSys.init(partCount, forces, walls);
 
-    this.vboContents = pSys.S0;
-    this.vboVerts = pSys.partCount;
+    // makeSpring();
+
+    // initiate spring system
+    this.pSys = new CPartSys();
+    this.forces = [F_SPRING];
+    this.walls = [WTYPE_YWALL_LO, WTYPE_YWALL_HI, WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_ZWALL_LO, WTYPE_ZWALL_HI, WTYPE_STICK];
+    this.pSys.initSpring(this.forces, this.walls);
+
+    this.vboContents = this.pSys.S0;
+    this.vboVerts = this.pSys.partCount;
 	this.FSIZE = this.vboContents.BYTES_PER_ELEMENT;
     this.vboBytes = this.vboContents.length * this.FSIZE;
     this.vboStride = this.vboBytes / this.vboVerts; 
     
-    this.vboFcount_a_Pos =  4;
+    this.vboFcount_a_Pos = 4;
     this.vboFcount_a_Colr = 3;
 
-    console.assert(PART_MAXVAR * this.FSIZE == this.vboStride, 
-        "Uh oh! VBObox2.vboStride disagrees with attribute-size values!");
+    // console.assert((this.vboFcount_a_Pos + 
+    //     this.vboFcount_a_Colr) * this.FSIZE == this.vboStride, 
+    //     "Uh oh! VBObox3.vboStride disagrees with attribute-size values!");
 
     this.vboOffset_a_Pos = PART_XPOS * this.FSIZE;
     this.vboOffset_a_Colr = PART_R * this.FSIZE;
@@ -406,20 +441,27 @@ VBObox3.prototype.init = function(){
     this.a_PosLoc = gl.getAttribLocation(this.shaderLoc, 'a_Position');
     if(this.a_PosLoc < 0) {
         console.log(this.constructor.name + 
-                              '.init() Failed to get GPU location of attribute a_Pos0');
+                              '.init() Failed to get GPU location of attribute a_Pos');
         return -1;
     }
     this.a_ColrLoc = gl.getAttribLocation(this.shaderLoc, 'a_Color');
     if(this.a_ColrLoc < 0) {
         console.log(this.constructor.name + 
-                              '.init() failed to get the GPU location of attribute a_Colr0');
+                              '.init() failed to get the GPU location of attribute a_Colr');
         return -1;
     }
 
     this.u_ModelMatLoc = gl.getUniformLocation(this.shaderLoc, 'u_ModelMatrix');
     if (!this.u_ModelMatLoc) { 
         console.log(this.constructor.name + 
-                              '.init() failed to get GPU location for u_ModelMat1 uniform');
+                              '.init() failed to get GPU location for u_ModelMat uniform');
+        return;
+    }
+
+    this.u_isPoint = gl.getUniformLocation(this.shaderLoc, 'u_isPoint');
+    if (!this.u_isPoint) { 
+        console.log(this.constructor.name + 
+                              '.init() failed to get GPU location for u_isPoint uniform');
         return;
     }
 }
@@ -453,7 +495,32 @@ VBObox3.prototype.adjust = function() {
 
 VBObox3.prototype.draw = function() {
     this.ModelMat = popMatrix();
-    drawBall(this.ModelMat, this.u_ModelMatLoc);
+    // drawSpring(this.pSys, this.ModelMat, this.u_ModelMatLoc);
+    if (runMode > 1){
+        if (runMode == 2) runMode = 1;  // do one step
+
+        // 1) DotFinder(): Find s0Dot from s0 & f0. 
+        this.pSys.applyAllForces(this.pSys.S0, this.pSys.F0);
+        this.pSys.dotMaker(this.pSys.S0dot, this.pSys.S0, g_timeStep);
+
+        //2) Solver(): Find s1 from s0 & s0dot
+        this.pSys.solver(g_timeStep, this.pSys.S0, this.pSys.S0dot, this.pSys.S1);
+
+        // 3) Apply all constraints
+        this.pSys.doConstraints(this.pSys.S1, this.pSys.S0, this.pSys.C0);
+    
+        // 4) Render
+        gl.uniform1i(this.u_isPoint, 1);
+        this.pSys.drawMe(this.pSys.S0, this.ModelMat, this.u_ModelMatLoc);
+        gl.uniform1i(this.u_isPoint, 0);
+        gl.drawArrays(gl.LINE_LOOP, 0, this.pSys.partCount);
+
+        // 5) Swap
+        [this.pSys.S0, this.pSys.S1] = this.pSys.stateVecSwap(this.pSys.S0, this.pSys.S1);
+    }
+    else{  // paused. Only draw current state
+        this.pSys.drawMe(this.pSys.S0, this.ModelMat, this.u_ModelMatLoc, gl.LINES);
+    }
 }
 
 VBObox3.prototype.isReady = function() {

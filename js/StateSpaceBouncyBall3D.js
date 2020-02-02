@@ -55,7 +55,31 @@ function main() {
     window.addEventListener("mousedown", myMouseDown);
     window.addEventListener("mousemove", myMouseMove);
     window.addEventListener("mouseup", myMouseUp);
-	window.addEventListener("keydown", myKeyDown, false);
+    window.addEventListener("keydown", myKeyDown, false);
+    
+    // Dat.gui
+    var GUIContent = function() {
+        this.solver = 'Midpoint';
+        this.switchToBall = function(){control1 = 1; control2 = 0;};
+        this.switchToSpring = function(){control2 = 1; control1 = 0;};
+    };
+
+    var text = new GUIContent();
+    var gui = new dat.GUI();
+
+    gui.add(text, 'solver', ['Euler', 'Implicit', 'Midpoint']).onChange(function(val){
+        if (val == 'Euler') solverType = SOLV_EULER;
+        else if (val == 'Implicit') solverType = SOLV_IMPLICIT;
+        else if (val == 'Midpoint') solverType = SOLV_MIDPOINT;
+    }).listen();
+    var ball = gui.addFolder('Ball');
+    ball.add(text, 'switchToBall');
+    ball.open();
+    var spring = gui.addFolder('Spring');
+    spring.add(text, 'switchToSpring');
+    spring.open();
+
+
 
     gl.clearColor(0.3, 0.3, 0.3, 1);
     gl.enable(gl.DEPTH_TEST); 
@@ -422,7 +446,7 @@ function myKeyDown(ev) {
         case "KeyR":
             // boost velocity only.
             var pSys = partBox1.pSys;
-            for (i = 0; i < pSys.partCount; i++){
+            for (var i = 0; i < pSys.partCount; i++){
                 if (pSys.S0[i * PART_MAXVAR + PART_XVEL] > 0.0){
                     pSys.S0[i * PART_MAXVAR + PART_XVEL] += (Math.random()+1) * 2;
                 }else{
@@ -434,11 +458,12 @@ function myKeyDown(ev) {
                     pSys.S0[i * PART_MAXVAR + PART_YVEL] -= (Math.random()+1) * 2;
                 }
                 if (pSys.S0[i * PART_MAXVAR + PART_ZVEL] > 0.0){
-                    pSys.S0[i * PART_MAXVAR + PART_ZVEL] += (Math.random()+1) * 2;
+                    pSys.S0[i * PART_MAXVAR + PART_ZVEL] += (Math.random()+1) * 5;
                 }else{
-                    pSys.S0[i * PART_MAXVAR + PART_ZVEL] -= (Math.random()+1) * 2;
+                    pSys.S0[i * PART_MAXVAR + PART_ZVEL] -= (Math.random()+1) * 5;
                 }
             }
+            debugger;
             break;
         
         case "KeyC":

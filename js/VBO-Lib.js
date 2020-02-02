@@ -183,7 +183,7 @@ function VBObox2(){
     'varying vec4 v_Color; \n' +
 
     'void main() {\n' +
-    '   gl_PointSize = 10.0;\n' + 
+    '   gl_PointSize = 5.0;\n' + 
     '   gl_Position = u_ModelMatrix * a_Position; \n' +
     '	v_Color = vec4(a_Color, 1.0); \n' +	
     '} \n';
@@ -389,9 +389,10 @@ function VBObox3(){
 
     // initiate spring system
     this.pSys = new CPartSys();
+    this.partCount = 10;
     this.forces = [F_SPRING_SNAKE];
     this.walls = [WTYPE_YWALL_LO, WTYPE_YWALL_HI, WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_ZWALL_LO, WTYPE_ZWALL_HI, WTYPE_STICK];
-    this.pSys.initSpring(this.forces, this.walls);
+    this.pSys.initSpring(this.partCount, this.forces, this.walls);
 
     this.vboContents = this.pSys.S0;
     this.vboVerts = this.pSys.partCount;

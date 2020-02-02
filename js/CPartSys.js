@@ -90,8 +90,8 @@ class CPartSys {
     }
 
 
-    initSpring(forces, walls){
-        this.partCount = 10;  // Spring vertex #
+    initSpring(partCount, forces, walls){
+        this.partCount = partCount;  // Spring vertex #
         this.forcerCount = forces.length;
         this.wallCount = walls.length;
 
@@ -105,10 +105,10 @@ class CPartSys {
         // Do all initializations here
         for (var i = 0, j = 0; i < this.partCount; i++, j += PART_MAXVAR){
             this.S0[j + PTYPE_DEAD] = 1;
-            this.S0[j + PART_MASS] = 1;
-            this.S0[j + PART_XPOS] = Math.sin(i);
+            this.S0[j + PART_MASS] = 0.01;
+            this.S0[j + PART_XPOS] = i*0.1;
             this.S0[j + PART_YPOS] = Math.cos(i);
-            this.S0[j + PART_ZPOS] = 1+0.5*Math.cos(i);
+            this.S0[j + PART_ZPOS] = 1.5-i*0.17;
             this.S0[j + PART_WPOS] =  1.0;
             this.S0[j + PART_XVEL] =  0.0;
             this.S0[j + PART_YVEL] =  0.0;
@@ -166,7 +166,7 @@ class CPartSys {
                     break;
                     
                 case F_GRAV_E:  // Earth gravity.
-                    for (i = 0; i < this.partCount; i++){  // For every particle
+                    for (var i = 0; i < this.partCount; i++){  // For every particle
                         // if (S[i].partType <= 0){  // Dead particle
                         //     continue;
                         // }
@@ -179,7 +179,7 @@ class CPartSys {
                     break;
 
                 case F_DRAG:  // viscous drag: force = -velocity*K_drag.
-                    for(i = 0; i < this.partCount; i++){
+                    for(var i = 0; i < this.partCount; i++){
                         // if(S[i].partType <= 0){  // skip 'dead' particles
                         //     continue; 
                         // }
@@ -217,25 +217,9 @@ class CPartSys {
                     break;
 
                 case F_SPRING_SNAKE:  // Spring snake
-                    // debugger;
-                    F[j].K_springlen = 0.4;
+                    F[j].K_springlen = 0.2;
                     F[j].K_spring = 6.0;
                     F[j].K_springdamp = 0.3;
-                   
-                    // var currLen = this.distance(
-                    //                             S.slice(PART_XPOS, PART_ZPOS + 1), 
-                    //                             S.slice(PART_MAXVAR + PART_XPOS, PART_MAXVAR + PART_ZPOS + 1));
-                    // var Ftot = -F[j].K_spring * (currLen - F[j].K_springlen);
-                    // S[PART_MAXVAR + PART_X_FTOT] += Ftot * (S[PART_MAXVAR + PART_XPOS] - S[PART_XPOS]) / currLen;
-                    // S[PART_MAXVAR + PART_X_FTOT] += -F[j].K_springdamp * S[PART_MAXVAR + PART_XVEL];
-
-                    // var currLen = this.distance(
-                    //                             S.slice(PART_MAXVAR + PART_XPOS, PART_MAXVAR + PART_ZPOS + 1), 
-                    //                             S.slice(2*PART_MAXVAR + PART_XPOS, 2*PART_MAXVAR + PART_ZPOS + 1));
-                    // var Ftot = -F[j].K_spring * (currLen - F[j].K_springlen);
-                    // S[2*PART_MAXVAR + PART_X_FTOT] +=  Ftot * (S[2*PART_MAXVAR + PART_XPOS] - S[PART_MAXVAR + PART_XPOS]) / currLen;
-                    // S[PART_MAXVAR + PART_X_FTOT] += -S[2*PART_MAXVAR + PART_X_FTOT];
-                    // S[2*PART_MAXVAR + PART_X_FTOT] +=  -F[j].K_springdamp * S[2*PART_MAXVAR + PART_XVEL];
 
                     for (var i = 0, k = 0; i < this.partCount-1; i++, k+= PART_MAXVAR){
                         var currLen = this.distance(
@@ -245,49 +229,25 @@ class CPartSys {
                         var Ftot = -F[j].K_spring * (currLen - F[j].K_springlen);
 
                         S[k + PART_MAXVAR + PART_X_FTOT] += Ftot * (S[k + PART_MAXVAR + PART_XPOS] - S[k + PART_XPOS]) / currLen;
+                        S[k + PART_MAXVAR + PART_Y_FTOT] += Ftot * (S[k + PART_MAXVAR + PART_YPOS] - S[k + PART_YPOS]) / currLen;
                         S[k + PART_MAXVAR + PART_Z_FTOT] += Ftot * (S[k + PART_MAXVAR + PART_ZPOS] - S[k + PART_ZPOS]) / currLen;
 
 
                         S[k + PART_X_FTOT] += -S[k + PART_MAXVAR + PART_X_FTOT];
+                        S[k + PART_Y_FTOT] += -S[k + PART_MAXVAR + PART_Y_FTOT];
                         S[k + PART_Z_FTOT] += -S[k + PART_MAXVAR + PART_Z_FTOT];
 
 
                         S[k + PART_MAXVAR + PART_X_FTOT] += -F[j].K_springdamp * S[k + PART_MAXVAR + PART_XVEL];
+                        S[k + PART_MAXVAR + PART_Y_FTOT] += -F[j].K_springdamp * S[k + PART_MAXVAR + PART_YVEL];
                         S[k + PART_MAXVAR + PART_Z_FTOT] += -F[j].K_springdamp * S[k + PART_MAXVAR + PART_ZVEL];
-
                     }
-                    
-
-
-                    // for (var i = 0, k = 0; i < this.partCount-1; i++, k+= PART_MAXVAR){
-                    //     // calculate Euclidean distance
-                    //     var currLen = this.distance(
-                    //                                 S.slice(k + PART_XPOS, k + PART_ZPOS + 1), 
-                    //                                 S.slice(k + PART_MAXVAR + PART_XPOS, k + PART_MAXVAR + PART_ZPOS + 1));
-                        
-                    //     // Fspring = -K * stretch
-                    //     var Ftot = -F[j].K_spring * (currLen - F[j].K_springlen)
-                    //     S[k+PART_X_FTOT] += (S[k+PART_XPOS] - S[k+PART_MAXVAR + PART_XPOS]) / currLen * Ftot;
-                    //     // S[k+PART_Y_FTOT] += (S[k+PART_YPOS] - S[k+PART_MAXVAR + PART_YPOS])* Ftot / currLen;
-                    //     // S[k+PART_Z_FTOT] += (S[k+PART_ZPOS] - S[k+PART_MAXVAR + PART_ZPOS]) * Ftot / currLen;
-                        
-                    //     S[k+PART_MAXVAR + PART_X_FTOT] = -S[k+PART_X_FTOT];
-                    //     // S[k+PART_MAXVAR + PART_Y_FTOT] = -S[k+PART_Y_FTOT];
-                    //     // S[k+PART_MAXVAR + PART_Z_FTOT] = -S[k+PART_Z_FTOT];
-                        
-                    //     // Fdaming = -bv
-                    //     S[k+PART_X_FTOT] += -F[j].K_springdamp * S[k+PART_XVEL];
-                    //     // S[k+PART_Y_FTOT] += -F[j].K_springdamp * S[k+PART_YVEL];
-                    //     // S[k+PART_Z_FTOT] += -F[j].K_springdamp * S[k+PART_ZVEL];
-                    // }
                     S[PART_X_FTOT] = 0.0;  // fix to one point
                     S[PART_Y_FTOT] = 0.0;
                     S[PART_Z_FTOT] = 0.0;
-
-                    // S[(this.partCount-1)*PART_MAXVAR + PART_X_FTOT] = 0.0;
+                    // S[(this.partCount-1)*PART_MAXVAR + PART_X_FTOT] = 0.0;  // fix another point
                     // S[(this.partCount-1)*PART_MAXVAR + PART_Y_FTOT] = 0.0;
                     // S[(this.partCount-1)*PART_MAXVAR + PART_Z_FTOT] = 0.0;
-
                     break;
 
                 case F_NONE:
@@ -397,8 +357,6 @@ class CPartSys {
         // step through constraints
         for (var j = 0; j < this.wallCount; j++){
             if (W[j].partSetSize == 0){  // limit applied on all particles
-                
-                    // debugger;
 
                     switch(W[j].wallType){  
                         case WTYPE_GROUND:
@@ -501,7 +459,9 @@ class CPartSys {
                         case WTYPE_AGE:
                             if (isFountain){
                                 for (var i = 0; i < this.partCount; i++){
-                                    S2[i * PART_MAXVAR + PART_AGE] = S1[i * PART_MAXVAR + PART_AGE] - 1; //????????
+                                    S2[i * PART_MAXVAR + PART_AGE] = S1[i * PART_MAXVAR + PART_AGE] - 1;
+                                    // S2[i * PART_MAXVAR + PART_MASS] = S1[i * PART_MAXVAR + PART_MASS] - 0.01;
+
                                     if (S2[i * PART_MAXVAR + PART_AGE] < 0.5 * S2[i * PART_MAXVAR + PART_MAXAGE]){
                                         S2[i * PART_MAXVAR + PART_R] = 0.0;
                                         S2[i * PART_MAXVAR + PART_G] = 0.0;
@@ -512,9 +472,11 @@ class CPartSys {
                                         S2[i * PART_MAXVAR + PART_G] = 1.0;
                                         S2[i * PART_MAXVAR + PART_B] = 0.0;
                                     }
-                                    if (S2[i * PART_MAXVAR + PART_AGE] < 0){  // Dead
+                                    
+                                    if (S2[i * PART_MAXVAR + PART_AGE] < 0 ){  // Dead
                                         // Restart life cycle.
                                         this.roundRand();
+                                        S2[i * PART_MAXVAR + PART_MASS] = 1 + Math.random()*2;
                                         S2[i * PART_MAXVAR + PART_XPOS] = this.randX;
                                         S2[i * PART_MAXVAR + PART_YPOS] = this.randY;
                                         S2[i * PART_MAXVAR + PART_ZPOS] = this.randZ+1;
@@ -527,6 +489,7 @@ class CPartSys {
                                         S2[i * PART_MAXVAR + PART_G] = 0.0;
                                         S2[i * PART_MAXVAR + PART_B] = 0.0;
                                     }
+                                    
                                 }
                             }
                             break;

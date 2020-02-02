@@ -389,7 +389,7 @@ function VBObox3(){
 
     // initiate spring system
     this.pSys = new CPartSys();
-    this.forces = [F_SPRING];
+    this.forces = [F_SPRING_SNAKE];
     this.walls = [WTYPE_YWALL_LO, WTYPE_YWALL_HI, WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_ZWALL_LO, WTYPE_ZWALL_HI, WTYPE_STICK];
     this.pSys.initSpring(this.forces, this.walls);
 
@@ -513,7 +513,7 @@ VBObox3.prototype.draw = function() {
         gl.uniform1i(this.u_isPoint, 1);
         this.pSys.drawMe(this.pSys.S0, this.ModelMat, this.u_ModelMatLoc);
         gl.uniform1i(this.u_isPoint, 0);
-        gl.drawArrays(gl.LINE_LOOP, 0, this.pSys.partCount);
+        gl.drawArrays(gl.LINE_STRIP, 0, this.pSys.partCount);
 
         // 5) Swap
         [this.pSys.S0, this.pSys.S1] = this.pSys.stateVecSwap(this.pSys.S0, this.pSys.S1);

@@ -4,7 +4,8 @@ F_MOUSE = 1;    // Spring-like connection to the mouse cursor;
 F_GRAV_E = 2;   // Earth-gravity: pulls all particles 'downward'.
 F_DRAG = 3;     // Viscous drag -- proportional to neg. velocity.
 F_SPRING = 4;   // ties together 2 particles; distance sets force
-F_MAXKINDS = 5; // 'max' is always the LAST name in our list;
+F_SPRING_SNAKE = 5;
+F_MAXKINDS = 6; // 'max' is always the LAST name in our list;
 
 class CForcer {
     forceType;  // sets the kind of force this object describes

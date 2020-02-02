@@ -2,8 +2,8 @@ var gl;
 var g_canvas;
 
 control0 = 1;
-control1 = 1;
-control2 = 0;
+control1 = 0;
+control2 = 1;
 
 worldBox = new VBObox1();
 partBox1 = new VBObox2();
@@ -519,8 +519,8 @@ function myMouseMove(ev){
     
     if (control2){
         var pSys = partBox2.pSys;
-        pSys.S0[PART_MAXVAR + PART_XPOS] += (x - xMclik);
-        pSys.S0[PART_MAXVAR + PART_ZPOS] += (y - yMclik);  
+        pSys.S0[PART_XPOS] -= (x - xMclik);
+        pSys.S0[PART_ZPOS] += (y - yMclik);  
     }
     
     xMclik = x;
@@ -538,5 +538,4 @@ function myMouseUp(ev) {
     isDrag = false;	
     xMdragTot += (x - xMclik);
     yMdragTot += (y - yMclik);
-    
 }

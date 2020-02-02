@@ -91,7 +91,7 @@ class CPartSys {
 
 
     initSpring(forces, walls){
-        this.partCount = 2;  // Spring vertex #
+        this.partCount = 10;  // Spring vertex #
         this.forcerCount = forces.length;
         this.wallCount = walls.length;
 
@@ -106,9 +106,9 @@ class CPartSys {
         for (var i = 0, j = 0; i < this.partCount; i++, j += PART_MAXVAR){
             this.S0[j + PTYPE_DEAD] = 1;
             this.S0[j + PART_MASS] = 1;
-            this.S0[j + PART_XPOS] = 0;
-            this.S0[j + PART_YPOS] = 0.0;
-            this.S0[j + PART_ZPOS] = 0.0;
+            this.S0[j + PART_XPOS] = Math.sin(i);
+            this.S0[j + PART_YPOS] = Math.cos(i);
+            this.S0[j + PART_ZPOS] = 1+0.5*Math.cos(i);
             this.S0[j + PART_WPOS] =  1.0;
             this.S0[j + PART_XVEL] =  0.0;
             this.S0[j + PART_YVEL] =  0.0;
@@ -123,23 +123,6 @@ class CPartSys {
             this.S0[j + PART_G] =  1.0;
             this.S0[j + PART_B] =  1.0;
         }
-
-        this.S0[PART_XPOS] = 0.0;
-        this.S0[PART_ZPOS] = 0.0;
-        this.S0[PART_MAXVAR+PART_XPOS] = -0.5;
-        this.S0[PART_MAXVAR+PART_ZPOS] = 0.0;
-        // this.S0[2*PART_MAXVAR+PART_XPOS] = -0.5;
-        // this.S0[2*PART_MAXVAR+PART_ZPOS] = 0.5;
-        // this.S0[3*PART_MAXVAR+PART_XPOS] = 0.0;
-        // this.S0[3*PART_MAXVAR+PART_ZPOS] = 0.5;
-        // this.S0[4*PART_MAXVAR+PART_XPOS] = 0.0;
-        // this.S0[4*PART_MAXVAR+PART_ZPOS] = 0.0;
-        // this.S0[5*PART_MAXVAR+PART_XPOS] = -0.5;
-        // this.S0[5*PART_MAXVAR+PART_ZPOS] = 0.5;
-        // this.S0[6*PART_MAXVAR+PART_XPOS] = -0.5;
-        // this.S0[6*PART_MAXVAR+PART_ZPOS] = 0.0;
-        // this.S0[7*PART_MAXVAR+PART_XPOS] = 0.0;
-        // this.S0[7*PART_MAXVAR+PART_ZPOS] = 0.5;
 
         // initialize s1 as a copy from s0
         this.S1.set(this.S0);
@@ -210,12 +193,12 @@ class CPartSys {
                     }
                     break;
 
-                case F_SPRING:  // Spring force
+                case F_SPRING:  // Spring force between two particles
                     F[j].K_springlen = 0.5;
                     F[j].K_spring = 5.0;
                     F[j].K_springdamp = 0.1;
 
-                    var currLen = this.distance(S.slice(PART_XPOS, PART_ZPOS+1), S.slice(PART_MAXVAR + PART_XPOS, PART_MAXVAR + PART_ZPOS+1));
+                    var currLen = this.distance(S.slice(PART_XPOS, PART_ZPOS+1), [S.slice(PART_MAXVAR + PART_XPOS, PART_MAXVAR + PART_ZPOS+1)]);
                     
                     // Fspring = -K * stretch
                     var Ftot = -F[j].K_spring * (currLen - F[j].K_springlen)
@@ -231,6 +214,80 @@ class CPartSys {
                     S[PART_X_FTOT] = -S[PART_MAXVAR + PART_X_FTOT];
                     S[PART_Y_FTOT] = -S[PART_MAXVAR + PART_Y_FTOT];
                     S[PART_Z_FTOT] = -S[PART_MAXVAR + PART_Z_FTOT];
+                    break;
+
+                case F_SPRING_SNAKE:  // Spring snake
+                    // debugger;
+                    F[j].K_springlen = 0.4;
+                    F[j].K_spring = 6.0;
+                    F[j].K_springdamp = 0.3;
+                   
+                    // var currLen = this.distance(
+                    //                             S.slice(PART_XPOS, PART_ZPOS + 1), 
+                    //                             S.slice(PART_MAXVAR + PART_XPOS, PART_MAXVAR + PART_ZPOS + 1));
+                    // var Ftot = -F[j].K_spring * (currLen - F[j].K_springlen);
+                    // S[PART_MAXVAR + PART_X_FTOT] += Ftot * (S[PART_MAXVAR + PART_XPOS] - S[PART_XPOS]) / currLen;
+                    // S[PART_MAXVAR + PART_X_FTOT] += -F[j].K_springdamp * S[PART_MAXVAR + PART_XVEL];
+
+                    // var currLen = this.distance(
+                    //                             S.slice(PART_MAXVAR + PART_XPOS, PART_MAXVAR + PART_ZPOS + 1), 
+                    //                             S.slice(2*PART_MAXVAR + PART_XPOS, 2*PART_MAXVAR + PART_ZPOS + 1));
+                    // var Ftot = -F[j].K_spring * (currLen - F[j].K_springlen);
+                    // S[2*PART_MAXVAR + PART_X_FTOT] +=  Ftot * (S[2*PART_MAXVAR + PART_XPOS] - S[PART_MAXVAR + PART_XPOS]) / currLen;
+                    // S[PART_MAXVAR + PART_X_FTOT] += -S[2*PART_MAXVAR + PART_X_FTOT];
+                    // S[2*PART_MAXVAR + PART_X_FTOT] +=  -F[j].K_springdamp * S[2*PART_MAXVAR + PART_XVEL];
+
+                    for (var i = 0, k = 0; i < this.partCount-1; i++, k+= PART_MAXVAR){
+                        var currLen = this.distance(
+                                                    S.slice(k+PART_XPOS, k+PART_ZPOS + 1), 
+                                                    S.slice(k+PART_MAXVAR + PART_XPOS, k+PART_MAXVAR + PART_ZPOS + 1));
+
+                        var Ftot = -F[j].K_spring * (currLen - F[j].K_springlen);
+
+                        S[k + PART_MAXVAR + PART_X_FTOT] += Ftot * (S[k + PART_MAXVAR + PART_XPOS] - S[k + PART_XPOS]) / currLen;
+                        S[k + PART_MAXVAR + PART_Z_FTOT] += Ftot * (S[k + PART_MAXVAR + PART_ZPOS] - S[k + PART_ZPOS]) / currLen;
+
+
+                        S[k + PART_X_FTOT] += -S[k + PART_MAXVAR + PART_X_FTOT];
+                        S[k + PART_Z_FTOT] += -S[k + PART_MAXVAR + PART_Z_FTOT];
+
+
+                        S[k + PART_MAXVAR + PART_X_FTOT] += -F[j].K_springdamp * S[k + PART_MAXVAR + PART_XVEL];
+                        S[k + PART_MAXVAR + PART_Z_FTOT] += -F[j].K_springdamp * S[k + PART_MAXVAR + PART_ZVEL];
+
+                    }
+                    
+
+
+                    // for (var i = 0, k = 0; i < this.partCount-1; i++, k+= PART_MAXVAR){
+                    //     // calculate Euclidean distance
+                    //     var currLen = this.distance(
+                    //                                 S.slice(k + PART_XPOS, k + PART_ZPOS + 1), 
+                    //                                 S.slice(k + PART_MAXVAR + PART_XPOS, k + PART_MAXVAR + PART_ZPOS + 1));
+                        
+                    //     // Fspring = -K * stretch
+                    //     var Ftot = -F[j].K_spring * (currLen - F[j].K_springlen)
+                    //     S[k+PART_X_FTOT] += (S[k+PART_XPOS] - S[k+PART_MAXVAR + PART_XPOS]) / currLen * Ftot;
+                    //     // S[k+PART_Y_FTOT] += (S[k+PART_YPOS] - S[k+PART_MAXVAR + PART_YPOS])* Ftot / currLen;
+                    //     // S[k+PART_Z_FTOT] += (S[k+PART_ZPOS] - S[k+PART_MAXVAR + PART_ZPOS]) * Ftot / currLen;
+                        
+                    //     S[k+PART_MAXVAR + PART_X_FTOT] = -S[k+PART_X_FTOT];
+                    //     // S[k+PART_MAXVAR + PART_Y_FTOT] = -S[k+PART_Y_FTOT];
+                    //     // S[k+PART_MAXVAR + PART_Z_FTOT] = -S[k+PART_Z_FTOT];
+                        
+                    //     // Fdaming = -bv
+                    //     S[k+PART_X_FTOT] += -F[j].K_springdamp * S[k+PART_XVEL];
+                    //     // S[k+PART_Y_FTOT] += -F[j].K_springdamp * S[k+PART_YVEL];
+                    //     // S[k+PART_Z_FTOT] += -F[j].K_springdamp * S[k+PART_ZVEL];
+                    // }
+                    S[PART_X_FTOT] = 0.0;  // fix to one point
+                    S[PART_Y_FTOT] = 0.0;
+                    S[PART_Z_FTOT] = 0.0;
+
+                    // S[(this.partCount-1)*PART_MAXVAR + PART_X_FTOT] = 0.0;
+                    // S[(this.partCount-1)*PART_MAXVAR + PART_Y_FTOT] = 0.0;
+                    // S[(this.partCount-1)*PART_MAXVAR + PART_Z_FTOT] = 0.0;
+
                     break;
 
                 case F_NONE:

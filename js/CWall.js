@@ -12,10 +12,11 @@ WTYPE_AGE = 10;
 WTYPE_MAXVAR = 11;     
 
 var ballRadius = 0.07;  // radius of ball
+var elasticity = 1.0;
 
 class CWall {
     wallType;
-    Kbouncy = 1.0;  // Coeff. of restoration for constraint surfaces
+    Kbouncy = elasticity;  // Coeff. of restoration for constraint surfaces
     xpos = 0.0; ypos = ballRadius; zpos = ballRadius; 
     xmin = -1.0+ballRadius; xmax = 1.0-ballRadius; ymin = -2.0+ballRadius; ymax = 1-ballRadius; zmin = 0.0+ballRadius; zmax = 1.8-ballRadius;
     wallSize = 0;   // limit on size of WTYPE_WALL constraints; wall

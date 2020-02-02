@@ -67,16 +67,20 @@ function main() {
         this.length = springLen;
         this.stiffness = springStiffness;
         this.damping = springDamp;
+        this.elasticity = elasticity;
     };
 
     var text = new GUIContent();
     var gui = new dat.GUI();
 
-    gui.add(text, 'solver', ['Euler', 'Implicit', 'Midpoint']).onChange(function(val){
+    gui.add(text, 'solver', ['Euler', 'Implicit', 'Midpoint', 'MyMethod']).onChange(function(val){
         if (val == 'Euler') solverType = SOLV_EULER;
         else if (val == 'Implicit') solverType = SOLV_IMPLICIT;
         else if (val == 'Midpoint') solverType = SOLV_MIDPOINT;
+        else if (val == 'MyMethod') solverType = SOLV_ME;
+
     }).listen();
+    gui.add(text, 'elasticity').onChange(function(val){elasticity = val;});
 
     var ball = gui.addFolder('Ball');
     ball.add(text, 'switchToBall');
@@ -84,11 +88,11 @@ function main() {
 
     var spring = gui.addFolder('Spring');
     spring.add(text, 'switchToSpring');
-    spring.add(text, 'number').onChange(function(val){partBox2.pSys.partCount = val;});
     spring.add(text, 'toggleFixedPoint');
+    spring.add(text, 'number').min(1).max(10).step(1).onChange(function(val){partBox2.pSys.partCount = val;});
     spring.add(text, 'length').onChange(function(val){springLen = val});
     spring.add(text, 'stiffness').onChange(function(val){springStiffness = val});
-    spring.add(text, 'damping').onChange(function(val){springDamp = val});
+    spring.add(text, 'damping', 0.01, 1).onChange(function(val){springDamp = val});
     spring.open();
 
     gl.clearColor(0.3, 0.3, 0.3, 1);

@@ -1,7 +1,8 @@
 SOLV_EULER = 0;
 SOLV_IMPLICIT = 1;
 SOLV_MIDPOINT = 2;
-SOLV_MAX = 3;
+SOLV_ME = 3;
+SOLV_MAX = 4;
 solverType = SOLV_MIDPOINT;
 
 isFountain = 0;
@@ -68,8 +69,8 @@ class CPartSys {
             this.S0[j + PART_MASS_VEL] = 0.0;
             this.S0[j + PART_MASS_FTOT] = 0.0;
             this.S0[j + PART_R] = 1.0;
-            this.S0[j + PART_G] = 0.0;
-            this.S0[j + PART_B] = 0.0;
+            this.S0[j + PART_G] = 1.0;
+            this.S0[j + PART_B] = 1.0;
         }
  
         // initialize s1 as a copy from s0
@@ -112,7 +113,7 @@ class CPartSys {
             this.S0[j + PTYPE_DEAD] = 1;
             this.S0[j + PART_MASS] = 0.01;
             this.S0[j + PART_XPOS] = i*0.1;
-            this.S0[j + PART_YPOS] = Math.cos(i);
+            this.S0[j + PART_YPOS] = 0;
             this.S0[j + PART_ZPOS] = 1.5-i*0.17;
             this.S0[j + PART_WPOS] =  1.0;
             this.S0[j + PART_XVEL] =  0.0;
@@ -305,8 +306,7 @@ class CPartSys {
         this.solvType = solverType;
         switch (this.solvType){
             case SOLV_EULER:
-                var k = 0;
-                for (var i = 0; i < this.partCount; i++, k += PART_MAXVAR){
+                for (var i = 0, k = 0; i < this.partCount; i++, k += PART_MAXVAR){
                     S1[k + PART_XPOS] = S0[k + PART_XPOS] + S0dot[k + PART_XPOS] * timeStep * 0.001;
                     S1[k + PART_YPOS] = S0[k + PART_YPOS] + S0dot[k + PART_YPOS] * timeStep * 0.001;
                     S1[k + PART_ZPOS] = S0[k + PART_ZPOS] + S0dot[k + PART_ZPOS] * timeStep * 0.001;
@@ -317,14 +317,14 @@ class CPartSys {
                 }
                 break;
             case SOLV_IMPLICIT:
-                for (var i = 0; i < this.partCount; i++){
+                for (var i = 0, k = 0; i < this.partCount; i++, k += PART_MAXVAR){
                     // IMPLICIT. Compute pos & vel for new state vector
-                    S1[i * PART_MAXVAR + PART_XVEL] = S0[i * PART_MAXVAR + PART_XVEL] + S0dot[i * PART_MAXVAR + PART_XVEL]* timeStep *0.001;
-                    S1[i * PART_MAXVAR + PART_YVEL] = S0[i * PART_MAXVAR + PART_YVEL] + S0dot[i * PART_MAXVAR + PART_YVEL]* timeStep *0.001;
-                    S1[i * PART_MAXVAR + PART_ZVEL] = S0[i * PART_MAXVAR + PART_ZVEL] + S0dot[i * PART_MAXVAR + PART_ZVEL]* timeStep *0.001;
-                    S1[i * PART_MAXVAR + PART_XPOS] = S0[i * PART_MAXVAR + PART_XPOS] + S1[i * PART_MAXVAR + PART_XVEL] * timeStep * 0.001;
-                    S1[i * PART_MAXVAR + PART_YPOS] = S0[i * PART_MAXVAR + PART_YPOS] + S1[i * PART_MAXVAR + PART_YVEL] * timeStep * 0.001;
-                    S1[i * PART_MAXVAR + PART_ZPOS] = S0[i * PART_MAXVAR + PART_ZPOS] + S1[i * PART_MAXVAR + PART_ZVEL] * timeStep * 0.001;
+                    S1[k + PART_XVEL] = S0[k + PART_XVEL] + S0dot[k + PART_XVEL]* timeStep *0.001;
+                    S1[k + PART_YVEL] = S0[k + PART_YVEL] + S0dot[k + PART_YVEL]* timeStep *0.001;
+                    S1[k + PART_ZVEL] = S0[k + PART_ZVEL] + S0dot[k + PART_ZVEL]* timeStep *0.001;
+                    S1[k + PART_XPOS] = S0[k + PART_XPOS] + S1[k + PART_XVEL] * timeStep * 0.001;
+                    S1[k + PART_YPOS] = S0[k + PART_YPOS] + S1[k + PART_YVEL] * timeStep * 0.001;
+                    S1[k + PART_ZPOS] = S0[k + PART_ZPOS] + S1[k + PART_ZVEL] * timeStep * 0.001;
                 }
                 break;
             case SOLV_MIDPOINT:
@@ -353,6 +353,34 @@ class CPartSys {
                     S1[k + PART_XVEL] = S0[k + PART_XVEL] + this.SMdot[k + PART_XVEL] * timeStep * 0.001;
                     S1[k + PART_YVEL] = S0[k + PART_YVEL] + this.SMdot[k + PART_YVEL] * timeStep * 0.001;
                     S1[k + PART_ZVEL] = S0[k + PART_ZVEL] + this.SMdot[k + PART_ZVEL] * timeStep * 0.001;
+                }
+                break;
+            case SOLV_ME:
+                for (var i = 0, k = 0; i < this.partCount; i++, k += PART_MAXVAR){
+                    // implicit
+                    S1[k + PART_XVEL] = S0[k + PART_XVEL] + S0dot[k + PART_XVEL]* timeStep *0.001;
+                    S1[k + PART_YVEL] = S0[k + PART_YVEL] + S0dot[k + PART_YVEL]* timeStep *0.001;
+                    S1[k + PART_ZVEL] = S0[k + PART_ZVEL] + S0dot[k + PART_ZVEL]* timeStep *0.001;
+                    S1[k + PART_XPOS] = S0[k + PART_XPOS] + S1[k + PART_XVEL] * timeStep * 0.001;
+                    S1[k + PART_YPOS] = S0[k + PART_YPOS] + S1[k + PART_YVEL] * timeStep * 0.001;
+                    S1[k + PART_ZPOS] = S0[k + PART_ZPOS] + S1[k + PART_ZVEL] * timeStep * 0.001;
+                    
+                    // euler
+                    S1[k + PART_XPOS] += S0[k + PART_XPOS] + S0dot[k + PART_XPOS] * timeStep * 0.001;
+                    S1[k + PART_YPOS] += S0[k + PART_YPOS] + S0dot[k + PART_YPOS] * timeStep * 0.001;
+                    S1[k + PART_ZPOS] += S0[k + PART_ZPOS] + S0dot[k + PART_ZPOS] * timeStep * 0.001;
+                    S1[k + PART_XVEL] += S0[k + PART_XVEL] + S0dot[k + PART_XVEL] * timeStep * 0.001;
+                    S1[k + PART_YVEL] += S0[k + PART_YVEL] + S0dot[k + PART_YVEL] * timeStep * 0.001;
+                    S1[k + PART_ZVEL] += S0[k + PART_ZVEL] + S0dot[k + PART_ZVEL] * timeStep * 0.001;
+
+                    // Average results of implicit & explicit solver
+                    S1[k + PART_XPOS] /= 2;
+                    S1[k + PART_YPOS] /= 2;
+                    S1[k + PART_ZPOS] /= 2;
+                    S1[k + PART_XVEL] /= 2;
+                    S1[k + PART_YVEL] /= 2;
+                    S1[k + PART_ZVEL] /= 2;
+
                 }
                 break;
         }
@@ -474,15 +502,16 @@ class CPartSys {
                                     S2[i * PART_MAXVAR + PART_AGE] = S1[i * PART_MAXVAR + PART_AGE] - 1;
                                     // S2[i * PART_MAXVAR + PART_MASS] = S1[i * PART_MAXVAR + PART_MASS] - 0.01;
 
-                                    if (S2[i * PART_MAXVAR + PART_AGE] < 0.5 * S2[i * PART_MAXVAR + PART_MAXAGE]){
-                                        S2[i * PART_MAXVAR + PART_R] = 0.0;
-                                        S2[i * PART_MAXVAR + PART_G] = 0.0;
-                                        S2[i * PART_MAXVAR + PART_B] = 0.0;
+                                    if (S2[i * PART_MAXVAR + PART_AGE] > 0.8 * S2[i * PART_MAXVAR + PART_MAXAGE]){
+                                        S2[i * PART_MAXVAR + PART_B] = S2[i * PART_MAXVAR + PART_AGE]/0.2/S2[i * PART_MAXVAR + PART_MAXAGE] - 4;
                                     }
-                                    else if (S2[i * PART_MAXVAR + PART_AGE] < 0.8 * S2[i * PART_MAXVAR + PART_MAXAGE]){
-                                        S2[i * PART_MAXVAR + PART_R] = 1.0;
-                                        S2[i * PART_MAXVAR + PART_G] = 1.0;
-                                        S2[i * PART_MAXVAR + PART_B] = 0.0;
+                                    else if (S2[i * PART_MAXVAR + PART_AGE] > 0.6 * S2[i * PART_MAXVAR + PART_MAXAGE]){
+                                        S2[i * PART_MAXVAR + PART_B] = 0;
+                                        S2[i * PART_MAXVAR + PART_G] = S2[i * PART_MAXVAR + PART_AGE]/0.2/S2[i * PART_MAXVAR + PART_MAXAGE] - 3;
+                                    }
+                                    else {
+                                        S2[i * PART_MAXVAR + PART_G] = 0;
+                                        S2[i * PART_MAXVAR + PART_R] = S2[i * PART_MAXVAR + PART_AGE]/0.6/S2[i * PART_MAXVAR + PART_MAXAGE];
                                     }
                                     
                                     if (S2[i * PART_MAXVAR + PART_AGE] < 0 ){  // Dead
@@ -498,8 +527,8 @@ class CPartSys {
                                         S2[i * PART_MAXVAR + PART_ZVEL] = this.INIT_VEL*(0.5 + this.randZ);
                                         S2[i * PART_MAXVAR + PART_AGE] = S2[i * PART_MAXVAR + PART_MAXAGE];
                                         S2[i * PART_MAXVAR + PART_R] = 1.0;
-                                        S2[i * PART_MAXVAR + PART_G] = 0.0;
-                                        S2[i * PART_MAXVAR + PART_B] = 0.0;
+                                        S2[i * PART_MAXVAR + PART_G] = 1.0;
+                                        S2[i * PART_MAXVAR + PART_B] = 1.0;
                                     }
                                     
                                 }

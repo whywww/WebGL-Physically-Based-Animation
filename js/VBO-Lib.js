@@ -389,7 +389,7 @@ function VBObox3(){
 
     // initiate spring system
     this.pSys = new CPartSys();
-    this.partCount = 10;
+    this.partCount = 4;
     this.forces = [F_SPRING_SNAKE];
     this.walls = [WTYPE_YWALL_LO, WTYPE_YWALL_HI, WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_ZWALL_LO, WTYPE_ZWALL_HI, WTYPE_STICK];
     this.pSys.initSpring(this.partCount, this.forces, this.walls);

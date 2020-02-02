@@ -62,6 +62,11 @@ function main() {
         this.solver = 'Midpoint';
         this.switchToBall = function(){control1 = 1; control2 = 0;};
         this.switchToSpring = function(){control2 = 1; control1 = 0;};
+        this.number = partBox2.pSys.partCount;
+        this.toggleFixedPoint = function(){isFixed = !isFixed;};
+        this.length = springLen;
+        this.stiffness = springStiffness;
+        this.damping = springDamp;
     };
 
     var text = new GUIContent();
@@ -72,14 +77,19 @@ function main() {
         else if (val == 'Implicit') solverType = SOLV_IMPLICIT;
         else if (val == 'Midpoint') solverType = SOLV_MIDPOINT;
     }).listen();
+
     var ball = gui.addFolder('Ball');
     ball.add(text, 'switchToBall');
     ball.open();
+
     var spring = gui.addFolder('Spring');
     spring.add(text, 'switchToSpring');
+    spring.add(text, 'number').onChange(function(val){partBox2.pSys.partCount = val;});
+    spring.add(text, 'toggleFixedPoint');
+    spring.add(text, 'length').onChange(function(val){springLen = val});
+    spring.add(text, 'stiffness').onChange(function(val){springStiffness = val});
+    spring.add(text, 'damping').onChange(function(val){springDamp = val});
     spring.open();
-
-
 
     gl.clearColor(0.3, 0.3, 0.3, 1);
     gl.enable(gl.DEPTH_TEST); 
@@ -525,6 +535,15 @@ function myMouseDown(ev) {
     isDrag = true;
     xMclik = x;	
     yMclik = y;
+
+    dis = [];
+    for (var i = 0, k = 0; i < partBox2.pSys.partCount; i++, k += PART_MAXVAR){
+        dis.push(distance([-x, 0, (y+1)*0.85], 
+                            [partBox2.pSys.S0[k + PART_XPOS],
+                            0,
+                            partBox2.pSys.S0[k + PART_ZPOS]]));
+    }
+    minDis = dis.indexOf(Math.min(...dis));
 }
 
 function myMouseMove(ev){
@@ -542,8 +561,8 @@ function myMouseMove(ev){
     
     if (control2){
         var pSys = partBox2.pSys;
-        pSys.S0[PART_XPOS] -= (x - xMclik);
-        pSys.S0[PART_ZPOS] += (y - yMclik);  
+        pSys.S0[minDis*PART_MAXVAR + PART_XPOS] -= (x - xMclik);
+        pSys.S0[minDis*PART_MAXVAR + PART_ZPOS] += (y - yMclik);  
     }
     
     xMclik = x;

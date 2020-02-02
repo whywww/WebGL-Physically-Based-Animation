@@ -463,7 +463,6 @@ function myKeyDown(ev) {
                     pSys.S0[i * PART_MAXVAR + PART_ZVEL] -= (Math.random()+1) * 5;
                 }
             }
-            debugger;
             break;
         
         case "KeyC":
@@ -509,7 +508,6 @@ function myKeyDown(ev) {
             if (solverType >= SOLV_MAX){
                 solverType = 0;
             } 
-            console.log(solverType);
             break;
 
         default:

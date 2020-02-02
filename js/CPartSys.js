@@ -132,7 +132,7 @@ class CPartSys {
         this.S0dot.fill(0);
         this.SMdot.fill(0);
 
-        this.solvType = SOLV_IMPLICIT;
+        this.solvType = solverType;
         
         this.F0 = [];
         for (i = 0; i < this.forcerCount; i++){

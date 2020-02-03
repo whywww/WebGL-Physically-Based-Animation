@@ -5,7 +5,9 @@ F_GRAV_E = 2;   // Earth-gravity: pulls all particles 'downward'.
 F_DRAG = 3;     // Viscous drag -- proportional to neg. velocity.
 F_SPRING = 4;   // ties together 2 particles; distance sets force
 F_SPRING_SNAKE = 5;
-F_MAXKINDS = 6; // 'max' is always the LAST name in our list;
+F_SPRING_TET = 6;
+F_WIND = 7;     // Blowing-wind-like force-field;fcn of 3D position
+F_MAXKINDS = 8; // 'max' is always the LAST name in our list;
 
 class CForcer {
     forceType;  // sets the kind of force this object describes
@@ -22,6 +24,10 @@ class CForcer {
     K_springdamp = 0.1; // Spring damping
     K_springlen = 0.0;  // Spring rest length
     fixedPoint = [0.0, 0.0, 0.0];  //  Endpoint of spring that's fixed
+
+    // Wind
+    D_wind = 1; 
+    v_wind = [1.0, 0.0, 0.0];
 
     constructor(forceType){
         this.forceType = forceType;

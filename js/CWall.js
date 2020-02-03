@@ -9,14 +9,17 @@ WTYPE_ZWALL_HI = 7;
 WTYPE_ANCHOR = 8;       // Lock one particle at location xpos,ypos,zpos
 WTYPE_STICK = 9;
 WTYPE_AGE = 10;
-WTYPE_MAXVAR = 11;     
+WTYPE_PBALL = 12;       // solid sphere centered at particle with index e0;
+WTYPE_MAXVAR = 13;     
 
-var ballRadius = 0.07;  // radius of ball
 var elasticity = 1.0;
+var pBallRadius = 0.2;
+var pBallCenter = [0.0, 0.0, 1.0];
 
 class CWall {
     wallType;
     Kbouncy = elasticity;  // Coeff. of restoration for constraint surfaces
+    
     xpos = 0.0; ypos = ballRadius; zpos = ballRadius; 
     xmin = -1.0+ballRadius; xmax = 1.0-ballRadius; ymin = -2.0+ballRadius; ymax = 1-ballRadius; zmin = 0.0+ballRadius; zmax = 1.8-ballRadius;
     wallSize = 0;   // limit on size of WTYPE_WALL constraints; wall
@@ -28,7 +31,6 @@ class CWall {
     //                 // -- 0 == 'all particles'
     //                 // -- 1 == one particle; e0 holds its index number.
     //                 // -- 2 == two particles; e0,e1 holds index numbers.
-    // e0; e1;  // Particle-index #s if we need only 1 or 2.
 
     constructor(wallType){
         this.wallType = wallType;

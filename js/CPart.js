@@ -41,5 +41,4 @@ class CPart{
                 //                  to re-enable this particle,
                 //                  set partType = -partType;
     val = new Float32Array(PART_MAXVAR);
-    
 }

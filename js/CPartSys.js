@@ -10,6 +10,9 @@ isFixed = true;
 springLen = 0.3;
 springStiffness = 2;
 springDamp = 0.3;
+windVel = [1.0, 0.0, 0.0];
+ballRadius = 0.05;  // radius of particle balls
+
 
 class CPartSys {
     //-------State Vectors-----------------------!
@@ -96,7 +99,63 @@ class CPartSys {
     }
 
 
-    initSpring(partCount, forces, walls){
+    initSpringSnake(partCount, forces, walls){
+        this.partCount = partCount;  // Spring vertex #
+        this.forcerCount = forces.length;
+        this.wallCount = walls.length;
+
+        // initialize s1 for all particles
+        this.S0 = new Float32Array(this.partCount * PART_MAXVAR);
+        this.S0dot = new Float32Array(this.partCount * PART_MAXVAR);
+        this.S1 = new Float32Array(this.partCount * PART_MAXVAR);
+        this.SM = new Float32Array(this.partCount * PART_MAXVAR);
+        this.SMdot = new Float32Array(this.partCount * PART_MAXVAR);
+
+        // Do all initializations here
+        for (var i = 0, j = 0; i < this.partCount; i++, j += PART_MAXVAR){
+            this.S0[j + PTYPE_DEAD] = 1;
+            this.S0[j + PART_MASS] = 0.01;
+            this.S0[j + PART_XPOS] = i*0.1;
+            this.S0[j + PART_YPOS] = 0;
+            this.S0[j + PART_ZPOS] = 1.5-i*0.17;
+            this.S0[j + PART_WPOS] =  1.0;
+            this.S0[j + PART_XVEL] =  0.0;
+            this.S0[j + PART_YVEL] =  0.0;
+            this.S0[j + PART_ZVEL] =  0.0;
+            this.S0[j + PART_X_FTOT] =  0.0;
+            this.S0[j + PART_Y_FTOT] =  0.0;
+            this.S0[j + PART_Z_FTOT] =  0.0;
+            this.S0[j + PART_AGE] =  0.0;
+            this.S0[j + PART_MASS_VEL] =  0.0;
+            this.S0[j + PART_MASS_FTOT] =  0.0;
+            this.S0[j + PART_R] =  1.0;
+            this.S0[j + PART_G] =  1.0;
+            this.S0[j + PART_B] =  1.0;
+        }
+
+        // initialize s1 as a copy from s0
+        this.S1.set(this.S0);
+        this.SM.set(this.S0);
+
+        // initialize s0dot as a copy from s0 but set all to 0
+        this.S0dot.fill(0);
+        this.SMdot.fill(0);
+
+        this.solvType = solverType;
+        
+        this.F0 = [];
+        for (i = 0; i < this.forcerCount; i++){
+            this.F0.push(new CForcer(forces[i]));
+        }
+
+        this.C0 = [];
+        for (i = 0; i < this.wallCount; i++){
+            this.C0.push(new CWall(walls[i]));
+        }
+    }
+
+
+    initSpringTet(partCount, forces, walls){
         this.partCount = partCount;  // Spring vertex #
         this.forcerCount = forces.length;
         this.wallCount = walls.length;
@@ -200,26 +259,26 @@ class CPartSys {
                     break;
 
                 case F_SPRING:  // Spring force between two particles
-                    F[j].K_springlen = springLen;
-                    F[j].K_spring = springStiffness;
-                    F[j].K_springdamp = springDamp;
+                    // F[j].K_springlen = springLen;
+                    // F[j].K_spring = springStiffness;
+                    // F[j].K_springdamp = springDamp;
 
-                    var currLen = distance(S.slice(PART_XPOS, PART_ZPOS+1), [S.slice(PART_MAXVAR + PART_XPOS, PART_MAXVAR + PART_ZPOS+1)]);
+                    // var currLen = distance(S.slice(PART_XPOS, PART_ZPOS+1), [S.slice(PART_MAXVAR + PART_XPOS, PART_MAXVAR + PART_ZPOS+1)]);
                     
-                    // Fspring = -K * stretch
-                    var Ftot = -F[j].K_spring * (currLen - F[j].K_springlen)
-                    S[PART_MAXVAR + PART_X_FTOT] += (S[PART_MAXVAR + PART_XPOS] - S[PART_XPOS]) * Ftot / currLen;
-                    S[PART_MAXVAR + PART_Y_FTOT] += (S[PART_MAXVAR + PART_YPOS] - S[PART_YPOS]) * Ftot / currLen;
-                    S[PART_MAXVAR + PART_Z_FTOT] += (S[PART_MAXVAR + PART_ZPOS] - S[PART_ZPOS]) * Ftot / currLen;
+                    // // Fspring = -K * stretch
+                    // var Ftot = -F[j].K_spring * (currLen - F[j].K_springlen)
+                    // S[PART_MAXVAR + PART_X_FTOT] += (S[PART_MAXVAR + PART_XPOS] - S[PART_XPOS]) * Ftot / currLen;
+                    // S[PART_MAXVAR + PART_Y_FTOT] += (S[PART_MAXVAR + PART_YPOS] - S[PART_YPOS]) * Ftot / currLen;
+                    // S[PART_MAXVAR + PART_Z_FTOT] += (S[PART_MAXVAR + PART_ZPOS] - S[PART_ZPOS]) * Ftot / currLen;
 
-                    // Fdaming = -bv
-                    S[PART_MAXVAR + PART_X_FTOT] += -F[j].K_springdamp * S[PART_MAXVAR + PART_XVEL];
-                    S[PART_MAXVAR + PART_Y_FTOT] += -F[j].K_springdamp * S[PART_MAXVAR + PART_YVEL];
-                    S[PART_MAXVAR + PART_Z_FTOT] += -F[j].K_springdamp * S[PART_MAXVAR + PART_ZVEL];
+                    // // Fdaming = -bv
+                    // S[PART_MAXVAR + PART_X_FTOT] += -F[j].K_springdamp * S[PART_MAXVAR + PART_XVEL];
+                    // S[PART_MAXVAR + PART_Y_FTOT] += -F[j].K_springdamp * S[PART_MAXVAR + PART_YVEL];
+                    // S[PART_MAXVAR + PART_Z_FTOT] += -F[j].K_springdamp * S[PART_MAXVAR + PART_ZVEL];
                     
-                    S[PART_X_FTOT] = -S[PART_MAXVAR + PART_X_FTOT];
-                    S[PART_Y_FTOT] = -S[PART_MAXVAR + PART_Y_FTOT];
-                    S[PART_Z_FTOT] = -S[PART_MAXVAR + PART_Z_FTOT];
+                    // S[PART_X_FTOT] = -S[PART_MAXVAR + PART_X_FTOT];
+                    // S[PART_Y_FTOT] = -S[PART_MAXVAR + PART_Y_FTOT];
+                    // S[PART_Z_FTOT] = -S[PART_MAXVAR + PART_Z_FTOT];
                     break;
 
                 case F_SPRING_SNAKE:  // Spring snake
@@ -262,7 +321,51 @@ class CPartSys {
                     // S[(this.partCount-1)*PART_MAXVAR + PART_Y_FTOT] = 0.0;
                     // S[(this.partCount-1)*PART_MAXVAR + PART_Z_FTOT] = 0.0;
                     break;
+                
+                case F_SPRING_TET:  // Spring tetrahedron
+                    F[j].K_springlen = springLen;
+                    F[j].K_spring = springStiffness;
+                    F[j].K_springdamp = springDamp;
 
+                    for (var i = 0; i < this.partCount-1; i++){
+                        for (var m = i + 1; m < this.partCount; m++){  // for every other particles
+                            var currLen = distance(
+                                                S.slice(i*PART_MAXVAR + PART_XPOS, i*PART_MAXVAR + PART_ZPOS + 1), 
+                                                S.slice(m*PART_MAXVAR + PART_XPOS, m*PART_MAXVAR + PART_ZPOS + 1));
+
+                            var Ftot = -F[j].K_spring * (currLen - F[j].K_springlen);
+
+                            S[m*PART_MAXVAR + PART_X_FTOT] += Ftot * (S[m*PART_MAXVAR + PART_XPOS] - S[i*PART_MAXVAR + PART_XPOS]) / currLen;
+                            // S[m*PART_MAXVAR + PART_Y_FTOT] += Ftot * (S[m*PART_MAXVAR + PART_YPOS] - S[i*PART_MAXVAR + PART_YPOS]) / currLen;
+                            S[m*PART_MAXVAR + PART_Z_FTOT] += Ftot * (S[m*PART_MAXVAR + PART_ZPOS] - S[i*PART_MAXVAR + PART_ZPOS]) / currLen;
+
+
+                            S[i*PART_MAXVAR + PART_X_FTOT] += -S[m*PART_MAXVAR + PART_X_FTOT];
+                            // S[i*PART_MAXVAR + PART_Y_FTOT] += -S[m*PART_MAXVAR + PART_Y_FTOT];
+                            S[i*PART_MAXVAR + PART_Z_FTOT] += -S[m*PART_MAXVAR + PART_Z_FTOT];
+
+
+                            S[m*PART_MAXVAR + PART_X_FTOT] += -F[j].K_springdamp * S[m*PART_MAXVAR + PART_XVEL];
+                            // S[m*PART_MAXVAR + PART_Y_FTOT] += -F[j].K_springdamp * S[m*PART_MAXVAR+ PART_YVEL];
+                            S[m*PART_MAXVAR + PART_Z_FTOT] += -F[j].K_springdamp * S[m*PART_MAXVAR + PART_ZVEL];
+                        }
+                        // S[PART_X_FTOT] = -S[PART_MAXVAR + PART_X_FTOT];
+                        // S[PART_Y_FTOT] = -S[PART_MAXVAR + PART_Y_FTOT];
+                        // S[PART_Z_FTOT] = -S[PART_MAXVAR + PART_Z_FTOT];
+                    }
+                    break;
+                
+                case F_WIND:
+                    F[j].D_wind = 0.1;
+                    F[j].v_wind = windVel;
+
+                    for (var i = 0, k = 0; i < this.partCount; i++, k += PART_MAXVAR){
+                        S[k + PART_X_FTOT] += F[j].D_wind * F[j].v_wind[0];
+                        S[k + PART_Y_FTOT] += F[j].D_wind * F[j].v_wind[1];
+                        S[k + PART_Z_FTOT] += F[j].D_wind * F[j].v_wind[2];
+                    }
+                    break;
+                
                 case F_NONE:
                     break;
 
@@ -466,36 +569,32 @@ class CPartSys {
 
                         case WTYPE_ZWALL_LO:
                             for (var i = 0; i < this.partCount; i++){
-                            if (S2[i * PART_MAXVAR + PART_ZPOS] < W[j].zmin && S2[i * PART_MAXVAR + PART_ZVEL] < 0.0){  // To be edited
-                                S2[i * PART_MAXVAR + PART_ZPOS] = W[j].zmin;
-                                S2[i * PART_MAXVAR + PART_ZVEL] = S1[i * PART_MAXVAR + PART_ZVEL];
-                                if (S2[i * PART_MAXVAR + PART_ZVEL] < 0.0){
-                                    S2[i * PART_MAXVAR + PART_ZVEL] *= -W[j].Kbouncy;
-                                } else {
-                                    S2[i * PART_MAXVAR + PART_ZVEL] *= W[j].Kbouncy;
+                                if (S2[i * PART_MAXVAR + PART_ZPOS] < W[j].zmin && S2[i * PART_MAXVAR + PART_ZVEL] < 0.0){  // To be edited
+                                    S2[i * PART_MAXVAR + PART_ZPOS] = W[j].zmin;
+                                    S2[i * PART_MAXVAR + PART_ZVEL] = S1[i * PART_MAXVAR + PART_ZVEL];
+                                    if (S2[i * PART_MAXVAR + PART_ZVEL] < 0.0){
+                                        S2[i * PART_MAXVAR + PART_ZVEL] *= -W[j].Kbouncy;
+                                    } else {
+                                        S2[i * PART_MAXVAR + PART_ZVEL] *= W[j].Kbouncy;
+                                    }
                                 }
-                            }}
+                            }
                             break;
 
                         case WTYPE_ZWALL_HI:
                             for (var i = 0; i < this.partCount; i++){
-                            if (S2[i * PART_MAXVAR + PART_ZPOS] > W[j].zmax && S2[i * PART_MAXVAR + PART_ZVEL] > 0.0){
-                                S2[i * PART_MAXVAR + PART_ZPOS] = W[j].zmax;
-                                S2[i * PART_MAXVAR + PART_ZVEL] = S1[i * PART_MAXVAR + PART_ZVEL];
-                                if (S2[i * PART_MAXVAR + PART_ZVEL] > 0.0){
-                                    S2[i * PART_MAXVAR + PART_ZVEL] *= -W[j].Kbouncy;
-                                } else {
-                                    S2[i * PART_MAXVAR + PART_ZVEL] *= W[j].Kbouncy;
+                                if (S2[i * PART_MAXVAR + PART_ZPOS] > W[j].zmax && S2[i * PART_MAXVAR + PART_ZVEL] > 0.0){
+                                    S2[i * PART_MAXVAR + PART_ZPOS] = W[j].zmax;
+                                    S2[i * PART_MAXVAR + PART_ZVEL] = S1[i * PART_MAXVAR + PART_ZVEL];
+                                    if (S2[i * PART_MAXVAR + PART_ZVEL] > 0.0){
+                                        S2[i * PART_MAXVAR + PART_ZVEL] *= -W[j].Kbouncy;
+                                    } else {
+                                        S2[i * PART_MAXVAR + PART_ZVEL] *= W[j].Kbouncy;
+                                    }
                                 }
-                            }}
+                            }
                             break;
-                        case WTYPE_STICK:  // To seperate 2 particles for a distance
-                            // if (distance(S2.slice(PART_XPOS, PART_ZPOS+1), S2.slice(PART_MAXVAR + PART_XPOS, PART_MAXVAR + PART_ZPOS+1))[0] < 0.01){
-                            //     S2[PART_MAXVAR + PART_XVEL] = -S2[PART_MAXVAR + PART_XVEL];
-                            //     S2[PART_MAXVAR + PART_YVEL] = -S2[PART_MAXVAR + PART_YVEL];
-                            //     S2[PART_MAXVAR + PART_ZVEL] = -S2[PART_MAXVAR + PART_ZVEL];
-                            // }
-                            break;
+
                         case WTYPE_AGE:
                             if (isFountain){
                                 for (var i = 0; i < this.partCount; i++){
@@ -531,6 +630,25 @@ class CPartSys {
                                         S2[i * PART_MAXVAR + PART_B] = 1.0;
                                     }
                                     
+                                }
+                            }
+                            break;
+
+                        case WTYPE_PBALL:
+                            for (var i = 0, k = 0; i < this.partCount; i++, k += PART_MAXVAR){
+                                var dis = distance(pBallCenter, S2.slice(k + PART_XPOS, k + PART_ZPOS + 1));
+                                if (dis < pBallRadius + ballRadius){
+                                    // debugger;
+                                    S2[k + PART_XPOS] = S1[k + PART_XPOS] - xMdragTot;
+                                    S2[k + PART_ZPOS] = S1[k + PART_ZPOS] + yMdragTot;
+                                    
+                                    S2[k + PART_XVEL] = S1[k + PART_XVEL];
+                                    S2[k + PART_YVEL] = S1[k + PART_YVEL];
+                                    S2[k + PART_ZVEL] = S1[k + PART_ZVEL];
+
+                                    S2[k + PART_XVEL] *= -W[j].Kbouncy;
+                                    S2[k + PART_YVEL] *= -W[j].Kbouncy;
+                                    S2[k + PART_ZVEL] *= -W[j].Kbouncy;
                                 }
                             }
                             break;
@@ -572,7 +690,7 @@ class CPartSys {
 
 
     //--------------Util---------------------
-    roundRand(){  // Find a 3D point randomly and uniformly in a sphere of radius 1.0
+    roundRand(){  // Find a 3D point randomly and uniformly in a sphere of radius 0.1
         do {
             this.randX = 2.0*Math.random() -1.0;
             this.randY = 2.0*Math.random() -1.0;

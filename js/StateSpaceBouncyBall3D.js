@@ -4,10 +4,13 @@ var g_canvas;
 control0 = 1;
 control1 = 0;
 control2 = 1;
+control3 = 0;
 
 worldBox = new VBObox1();
 partBox1 = new VBObox2();
 partBox2 = new VBObox3();
+partBox3 = new VBObox4();
+
 
 var g_timeStep = 1000.0/60.0;  // milliseconds
 var g_timeStepMin = g_timeStep;
@@ -50,6 +53,8 @@ function main() {
     worldBox.init(gl);
     partBox1.init(gl);
     partBox2.init(gl);
+    partBox3.init(gl);
+
 
     // Event register
     window.addEventListener("mousedown", myMouseDown);
@@ -68,6 +73,8 @@ function main() {
         this.stiffness = springStiffness;
         this.damping = springDamp;
         this.elasticity = elasticity;
+        this.windVel = windVel[0];
+        this.radius = pBallRadius;
     };
 
     var text = new GUIContent();
@@ -81,6 +88,8 @@ function main() {
 
     }).listen();
     gui.add(text, 'elasticity').onChange(function(val){elasticity = val;});
+    gui.add(text, 'windVel').onChange(function(val){windVel[0] = val;});
+    gui.add(text, 'radius').onChange(function(val){pBallRadius = val;});
 
     var ball = gui.addFolder('Ball');
     ball.add(text, 'switchToBall');
@@ -147,6 +156,11 @@ function drawAll() {
         partBox2.switchToMe();
         partBox2.adjust();
         partBox2.draw();     
+    }
+    if (control3){
+        partBox3.switchToMe();
+        partBox3.adjust();
+        partBox3.draw();     
     }
 }
 
@@ -277,6 +291,77 @@ function makeSpring(){
 }
 
 
+function makeSphere() {
+    var slices =12;		
+    var sliceVerts	= 21;
+
+    var topColr = new Float32Array([0.0, 0.5, 0.0]);
+    var botColr = new Float32Array([0.0, 0.7, 0.0]);
+    var errColr = new Float32Array([0.0, 0.5, 0.0]);
+    var sliceAngle = Math.PI/slices;	
+
+    sphVerts = new Float32Array(((slices*2*sliceVerts)-2) * floatsPerVertex);
+                                
+    var cosBot = 0.0;				
+    var sinBot = 0.0;				
+    var cosTop = 0.0;			
+    var sinTop = 0.0;
+    var j = 0;					
+    var isFirstSlice = 1;		
+    var isLastSlice = 0;		
+    for(s=0; s<slices; s++) {	
+        if(s==0) {
+            isFirstSlice = 1;		
+            cosBot =  0.0; 		
+            sinBot = -1.0;		
+        }
+        else {					
+            isFirstSlice = 0;	
+            cosBot = cosTop;
+            sinBot = sinTop;
+        }						
+        cosTop = Math.cos((-Math.PI/2) +(s+1)*sliceAngle); 
+        sinTop = Math.sin((-Math.PI/2) +(s+1)*sliceAngle);
+        if(s==slices-1) isLastSlice=1;
+        for(v=isFirstSlice;    v< 2*sliceVerts-isLastSlice;   v++,j+=floatsPerVertex)
+        {					
+            if(v%2 ==0) { 
+                sphVerts[j  ] = cosBot * Math.cos(Math.PI * v/sliceVerts);	
+                sphVerts[j+1] = cosBot * Math.sin(Math.PI * v/sliceVerts);	
+                sphVerts[j+2] = sinBot;																			// z
+                sphVerts[j+3] = 1.0;																				// w.				
+            }
+            else {	
+                sphVerts[j  ] = cosTop * Math.cos(Math.PI * (v-1)/sliceVerts); 
+                sphVerts[j+1] = cosTop * Math.sin(Math.PI * (v-1)/sliceVerts);
+                sphVerts[j+2] = sinTop;		
+                sphVerts[j+3] = 1.0;	
+            }
+            if(v==0) { 	
+                sphVerts[j+4]=errColr[0]; 
+                sphVerts[j+5]=errColr[1]; 
+                sphVerts[j+6]=errColr[2];				
+                }
+            else if(isFirstSlice==1) {	
+                sphVerts[j+4]=botColr[0]; 
+                sphVerts[j+5]=botColr[1]; 
+                sphVerts[j+6]=botColr[2];	
+                }
+            else if(isLastSlice==1) {
+                sphVerts[j+4]=topColr[0]; 
+                sphVerts[j+5]=topColr[1]; 
+                sphVerts[j+6]=topColr[2];	
+            }
+            else {	
+                    sphVerts[j+4]= 0.0; 
+                    sphVerts[j+5]= 0.5;	
+                    sphVerts[j+6]= 0.0;	
+            }
+        }
+    }
+}   
+
+
 function drawBall(modelMatrix, u_ModelMatrix){
 
     if (runMode > 1){
@@ -379,6 +464,14 @@ function drawSpring(pSys, modelMatrix, u_ModelMatrix){
     else{  // paused. Only draw current state
         pSys.drawMe(pSys.S0, modelMatrix, u_ModelMatrix, gl.LINES);
     }
+}
+
+
+function drawSphere(modelMatrix, u_ModelMatrix){
+    modelMatrix.translate(pBallCenter[0], pBallCenter[1], pBallCenter[2]);
+    modelMatrix.scale(pBallRadius, pBallRadius, pBallRadius);
+    gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
+    gl.drawArrays(gl.TRIANGLE_STRIP, sphStart/floatsPerVertex, sphVerts.length/floatsPerVertex);
 }
 
 
@@ -540,14 +633,14 @@ function myMouseDown(ev) {
     xMclik = x;	
     yMclik = y;
 
-    dis = [];
-    for (var i = 0, k = 0; i < partBox2.pSys.partCount; i++, k += PART_MAXVAR){
-        dis.push(distance([-x, 0, (y+1)*0.85], 
-                            [partBox2.pSys.S0[k + PART_XPOS],
-                            0,
-                            partBox2.pSys.S0[k + PART_ZPOS]]));
-    }
-    minDis = dis.indexOf(Math.min(...dis));
+    // dis = [];
+    // for (var i = 0, k = 0; i < partBox2.pSys.partCount; i++, k += PART_MAXVAR){
+    //     dis.push(distance([-x, 0, (y+1)*0.85], 
+    //                         [partBox2.pSys.S0[k + PART_XPOS],
+    //                         0,
+    //                         partBox2.pSys.S0[k + PART_ZPOS]]));
+    // }
+    // minDis = dis.indexOf(Math.min(...dis));
 }
 
 function myMouseMove(ev){
@@ -560,14 +653,18 @@ function myMouseMove(ev){
     var x = (xp - g_canvas.width/2) / (g_canvas.width/2);	
     var y = (yp - g_canvas.height/2) / (g_canvas.height/2);
  
-    xMdragTot += (x - xMclik);
-    yMdragTot += (y - yMclik);
+    xMdragTot = (x - xMclik);
+    yMdragTot = (y - yMclik);
     
-    if (control2){
-        var pSys = partBox2.pSys;
-        pSys.S0[minDis*PART_MAXVAR + PART_XPOS] -= (x - xMclik);
-        pSys.S0[minDis*PART_MAXVAR + PART_ZPOS] += (y - yMclik);  
-    }
+    // if (control2){
+    //     var pSys = partBox2.pSys;
+    //     pSys.S0[PART_XPOS] -= (x - xMclik);
+    //     pSys.S0[PART_ZPOS] += (y - yMclik);  
+    // }
+    console.log('before', pBallCenter[0]);
+    pBallCenter[0] -= (x - xMclik);
+    pBallCenter[2] += (y - yMclik);
+    console.log('after:', pBallCenter[0]);
     
     xMclik = x;
     yMclik = y;
@@ -582,6 +679,7 @@ function myMouseUp(ev) {
     var y = (yp - g_canvas.height/2) / (g_canvas.height/2);
 
     isDrag = false;	
-    xMdragTot += (x - xMclik);
-    yMdragTot += (y - yMclik);
+    // xMdragTot -= (x - xMclik);
+    // yMdragTot += (y - yMclik);
+    // console.log('upppppppp:', xMdragTot);
 }

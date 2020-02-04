@@ -7,6 +7,8 @@ solverType = SOLV_MIDPOINT;
 
 isFountain = 0;
 isFixed = true;
+isWind = true;
+
 springLen = 0.3;
 springStiffness = 2;
 springDamp = 0.3;
@@ -298,24 +300,24 @@ class CPartSys {
                         S[k + PART_MAXVAR + PART_Z_FTOT] += Ftot * (S[k + PART_MAXVAR + PART_ZPOS] - S[k + PART_ZPOS]) / currLen;
 
 
-                        S[k + PART_X_FTOT] += -S[k + PART_MAXVAR + PART_X_FTOT];
-                        S[k + PART_Y_FTOT] += -S[k + PART_MAXVAR + PART_Y_FTOT];
-                        S[k + PART_Z_FTOT] += -S[k + PART_MAXVAR + PART_Z_FTOT];
-
-
                         S[k + PART_MAXVAR + PART_X_FTOT] += -F[j].K_springdamp * S[k + PART_MAXVAR + PART_XVEL];
                         S[k + PART_MAXVAR + PART_Y_FTOT] += -F[j].K_springdamp * S[k + PART_MAXVAR + PART_YVEL];
                         S[k + PART_MAXVAR + PART_Z_FTOT] += -F[j].K_springdamp * S[k + PART_MAXVAR + PART_ZVEL];
+
+                        S[k + PART_X_FTOT] += -S[k + PART_MAXVAR + PART_X_FTOT];
+                        S[k + PART_Y_FTOT] += -S[k + PART_MAXVAR + PART_Y_FTOT];
+                        S[k + PART_Z_FTOT] += -S[k + PART_MAXVAR + PART_Z_FTOT];
                     }
                     if (isFixed){
                         S[PART_X_FTOT] = 0;  // fix to one point
                         S[PART_Y_FTOT] = 0;
                         S[PART_Z_FTOT] = 0;
-                    } else {
-                        S[PART_X_FTOT] = -S[PART_MAXVAR + PART_X_FTOT];
-                        S[PART_Y_FTOT] = -S[PART_MAXVAR + PART_Y_FTOT];
-                        S[PART_Z_FTOT] = -S[PART_MAXVAR + PART_Z_FTOT];
                     }
+                    //  else {
+                    //     S[PART_X_FTOT] = -S[PART_MAXVAR + PART_X_FTOT];
+                    //     S[PART_Y_FTOT] = -S[PART_MAXVAR + PART_Y_FTOT];
+                    //     S[PART_Z_FTOT] = -S[PART_MAXVAR + PART_Z_FTOT];
+                    // }
                     
                     // S[(this.partCount-1)*PART_MAXVAR + PART_X_FTOT] = 0.0;  // fix another point
                     // S[(this.partCount-1)*PART_MAXVAR + PART_Y_FTOT] = 0.0;
@@ -326,9 +328,10 @@ class CPartSys {
                     F[j].K_springlen = springLen;
                     F[j].K_spring = springStiffness;
                     F[j].K_springdamp = springDamp;
+                    // debugger;
 
-                    for (var i = 0; i < this.partCount-1; i++){
-                        for (var m = i + 1; m < this.partCount; m++){  // for every other particles
+                    for (var m = 0; m < this.partCount-1; m++){
+                        for (var i = m + 1; i < this.partCount; i++){  // for every other particles
                             var currLen = distance(
                                                 S.slice(i*PART_MAXVAR + PART_XPOS, i*PART_MAXVAR + PART_ZPOS + 1), 
                                                 S.slice(m*PART_MAXVAR + PART_XPOS, m*PART_MAXVAR + PART_ZPOS + 1));
@@ -336,33 +339,31 @@ class CPartSys {
                             var Ftot = -F[j].K_spring * (currLen - F[j].K_springlen);
 
                             S[m*PART_MAXVAR + PART_X_FTOT] += Ftot * (S[m*PART_MAXVAR + PART_XPOS] - S[i*PART_MAXVAR + PART_XPOS]) / currLen;
-                            // S[m*PART_MAXVAR + PART_Y_FTOT] += Ftot * (S[m*PART_MAXVAR + PART_YPOS] - S[i*PART_MAXVAR + PART_YPOS]) / currLen;
+                            S[m*PART_MAXVAR + PART_Y_FTOT] += Ftot * (S[m*PART_MAXVAR + PART_YPOS] - S[i*PART_MAXVAR + PART_YPOS]) / currLen;
                             S[m*PART_MAXVAR + PART_Z_FTOT] += Ftot * (S[m*PART_MAXVAR + PART_ZPOS] - S[i*PART_MAXVAR + PART_ZPOS]) / currLen;
 
+                            S[m*PART_MAXVAR + PART_X_FTOT] += -F[j].K_springdamp * S[m*PART_MAXVAR + PART_XVEL];
+                            S[m*PART_MAXVAR + PART_Y_FTOT] += -F[j].K_springdamp * S[m*PART_MAXVAR+ PART_YVEL];
+                            S[m*PART_MAXVAR + PART_Z_FTOT] += -F[j].K_springdamp * S[m*PART_MAXVAR + PART_ZVEL];
 
                             S[i*PART_MAXVAR + PART_X_FTOT] += -S[m*PART_MAXVAR + PART_X_FTOT];
-                            // S[i*PART_MAXVAR + PART_Y_FTOT] += -S[m*PART_MAXVAR + PART_Y_FTOT];
+                            S[i*PART_MAXVAR + PART_Y_FTOT] += -S[m*PART_MAXVAR + PART_Y_FTOT];
                             S[i*PART_MAXVAR + PART_Z_FTOT] += -S[m*PART_MAXVAR + PART_Z_FTOT];
-
-
-                            S[m*PART_MAXVAR + PART_X_FTOT] += -F[j].K_springdamp * S[m*PART_MAXVAR + PART_XVEL];
-                            // S[m*PART_MAXVAR + PART_Y_FTOT] += -F[j].K_springdamp * S[m*PART_MAXVAR+ PART_YVEL];
-                            S[m*PART_MAXVAR + PART_Z_FTOT] += -F[j].K_springdamp * S[m*PART_MAXVAR + PART_ZVEL];
                         }
-                        // S[PART_X_FTOT] = -S[PART_MAXVAR + PART_X_FTOT];
-                        // S[PART_Y_FTOT] = -S[PART_MAXVAR + PART_Y_FTOT];
-                        // S[PART_Z_FTOT] = -S[PART_MAXVAR + PART_Z_FTOT];
                     }
+
                     break;
                 
                 case F_WIND:
-                    F[j].D_wind = 0.1;
-                    F[j].v_wind = windVel;
-
-                    for (var i = 0, k = 0; i < this.partCount; i++, k += PART_MAXVAR){
-                        S[k + PART_X_FTOT] += F[j].D_wind * F[j].v_wind[0];
-                        S[k + PART_Y_FTOT] += F[j].D_wind * F[j].v_wind[1];
-                        S[k + PART_Z_FTOT] += F[j].D_wind * F[j].v_wind[2];
+                    if (isWind){
+                        F[j].D_wind = 0.1;
+                        F[j].v_wind = windVel;
+    
+                        for (var i = 0, k = 0; i < this.partCount; i++, k += PART_MAXVAR){
+                            S[k + PART_X_FTOT] += F[j].D_wind * F[j].v_wind[0];
+                            S[k + PART_Y_FTOT] += F[j].D_wind * F[j].v_wind[1];
+                            S[k + PART_Z_FTOT] += F[j].D_wind * F[j].v_wind[2];
+                        }
                     }
                     break;
                 

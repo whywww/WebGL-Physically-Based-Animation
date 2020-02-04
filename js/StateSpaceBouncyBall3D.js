@@ -3,8 +3,8 @@ var g_canvas;
 
 control0 = 1;
 control1 = 0;
-control2 = 1;
-control3 = 0;
+control2 = 0;
+control3 = 1;
 
 worldBox = new VBObox1();
 partBox1 = new VBObox2();
@@ -55,7 +55,6 @@ function main() {
     partBox2.init(gl);
     partBox3.init(gl);
 
-
     // Event register
     window.addEventListener("mousedown", myMouseDown);
     window.addEventListener("mousemove", myMouseMove);
@@ -65,44 +64,66 @@ function main() {
     // Dat.gui
     var GUIContent = function() {
         this.solver = 'Midpoint';
-        this.switchToBall = function(){control1 = 1; control2 = 0;};
-        this.switchToSpring = function(){control2 = 1; control1 = 0;};
-        this.number = partBox2.pSys.partCount;
-        this.toggleFixedPoint = function(){isFixed = !isFixed;};
-        this.length = springLen;
+        this.wallElasticity = elasticity;
+        this.greenBallRadius = pBallRadius;
+    };
+    var BallContent = function(){
+        this.switchToMe = function(){control1 = 1; control2 = 0; control3 = 0};
+        this.wind = isWind;
+        this.windVelocity = windVel[0];
+    };
+    var SpringContent = function(){
+        this.springLength = springLen;
         this.stiffness = springStiffness;
         this.damping = springDamp;
-        this.elasticity = elasticity;
-        this.windVel = windVel[0];
-        this.radius = pBallRadius;
+    };
+    var SnakeContent = function(){
+        this.switchToMe = function(){control2 = 1; control1 = 0; control3 = 0;};
+        this.toggleFixedPoint = function(){isFixed = !isFixed;};
+        this.number = partBox2.pSys.partCount;
+    };
+    var TetContent = function(){
+        this.switchToMe = function(){control3 = 1; control1 = 0; control2 = 0;}
     };
 
     var text = new GUIContent();
+    var balltext = new BallContent();
+    var springText = new SpringContent();
+    var snakeText = new SnakeContent();
+    var tetText = new TetContent();
     var gui = new dat.GUI();
+
 
     gui.add(text, 'solver', ['Euler', 'Implicit', 'Midpoint', 'MyMethod']).onChange(function(val){
         if (val == 'Euler') solverType = SOLV_EULER;
         else if (val == 'Implicit') solverType = SOLV_IMPLICIT;
         else if (val == 'Midpoint') solverType = SOLV_MIDPOINT;
         else if (val == 'MyMethod') solverType = SOLV_ME;
-
     }).listen();
-    gui.add(text, 'elasticity').onChange(function(val){elasticity = val;});
-    gui.add(text, 'windVel').onChange(function(val){windVel[0] = val;});
-    gui.add(text, 'radius').onChange(function(val){pBallRadius = val;});
+    gui.add(text, 'wallElasticity').onChange(function(val){elasticity = val;});
+    gui.add(text, 'greenBallRadius').onChange(function(val){pBallRadius = val;});
 
     var ball = gui.addFolder('Ball');
-    ball.add(text, 'switchToBall');
+    ball.add(balltext, 'switchToMe');
+    ball.add(balltext, 'wind').onChange(function(){isWind = !isWind;});
+    ball.add(balltext, 'windVelocity').onChange(function(val){windVel[0] = val;});
     ball.open();
 
     var spring = gui.addFolder('Spring');
-    spring.add(text, 'switchToSpring');
-    spring.add(text, 'toggleFixedPoint');
-    spring.add(text, 'number').min(1).max(10).step(1).onChange(function(val){partBox2.pSys.partCount = val;});
-    spring.add(text, 'length').onChange(function(val){springLen = val});
-    spring.add(text, 'stiffness').onChange(function(val){springStiffness = val});
-    spring.add(text, 'damping', 0.01, 1).onChange(function(val){springDamp = val});
+    spring.add(springText, 'springLength').onChange(function(val){springLen = val});
+    spring.add(springText, 'stiffness').onChange(function(val){springStiffness = val});
+    spring.add(springText, 'damping', 0.01, 1).onChange(function(val){springDamp = val});
     spring.open();
+
+    var sprSnake = spring.addFolder('springSnake');
+    sprSnake.add(snakeText, 'switchToMe');
+    sprSnake.add(snakeText, 'toggleFixedPoint');
+    sprSnake.add(snakeText, 'number').min(1).max(10).step(1).onChange(function(val){partBox2.pSys.partCount = val;});
+    sprSnake.open();
+
+    var sprTet = spring.addFolder('SpringTetrahedron');
+    sprTet.add(tetText, 'switchToMe');
+    sprTet.open();
 
     gl.clearColor(0.3, 0.3, 0.3, 1);
     gl.enable(gl.DEPTH_TEST); 
@@ -147,17 +168,17 @@ function drawAll() {
         worldBox.adjust();
         worldBox.draw();   
     }
-    if (control1){
+    if (control1){  // bouncy ball
         partBox1.switchToMe();
         partBox1.adjust();
         partBox1.draw();  
     }
-    if (control2){
+    if (control2){  // spring snake
         partBox2.switchToMe();
         partBox2.adjust();
         partBox2.draw();     
     }
-    if (control3){
+    if (control3){  // spring tetrahedron
         partBox3.switchToMe();
         partBox3.adjust();
         partBox3.draw();     
@@ -656,15 +677,13 @@ function myMouseMove(ev){
     xMdragTot = (x - xMclik);
     yMdragTot = (y - yMclik);
     
-    // if (control2){
-    //     var pSys = partBox2.pSys;
+    // if (control3){
+    //     var pSys = partBox3.pSys;
     //     pSys.S0[PART_XPOS] -= (x - xMclik);
     //     pSys.S0[PART_ZPOS] += (y - yMclik);  
     // }
-    console.log('before', pBallCenter[0]);
     pBallCenter[0] -= (x - xMclik);
     pBallCenter[2] += (y - yMclik);
-    console.log('after:', pBallCenter[0]);
     
     xMclik = x;
     yMclik = y;

@@ -211,7 +211,7 @@ function VBObox2(){
     '}\n';
     // initiate particle system
     this.pSys = new CPartSys();
-    this.partCount = 10;
+    this.partCount = 1000;
     this.forces = [F_GRAV_E, F_DRAG, F_WIND];
     this.walls = [WTYPE_YWALL_LO, WTYPE_YWALL_HI, WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_ZWALL_LO, WTYPE_ZWALL_HI, WTYPE_AGE, WTYPE_PBALL];
     this.pSys.initBouncyBall(this.partCount, this.forces, this.walls);
@@ -400,7 +400,7 @@ function VBObox3(){
 
     // initiate spring system
     this.pSys = new CPartSys();
-    this.partCount = 4;
+    this.partCount = 3;
     this.forces = [F_SPRING_SNAKE];
     this.walls = [WTYPE_YWALL_LO, WTYPE_YWALL_HI, WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_ZWALL_LO, WTYPE_ZWALL_HI, WTYPE_PBALL];
     this.pSys.initSpringSnake(this.partCount, this.forces, this.walls);
@@ -601,14 +601,15 @@ function VBObox4(){
     '}\n';
 
     this.indices = new Uint8Array([
-        0,2, 1,3
+        0, 2,
+        1, 3
     ]);
 
     // initiate spring system
     this.pSys = new CPartSys();
     this.partCount = 4;
     this.forces = [F_SPRING_TET];
-    this.walls = [WTYPE_YWALL_LO, WTYPE_YWALL_HI, WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_ZWALL_LO, WTYPE_ZWALL_HI, WTYPE_STICK];
+    this.walls = [WTYPE_YWALL_LO, WTYPE_YWALL_HI, WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_ZWALL_LO, WTYPE_ZWALL_HI, WTYPE_PBALL];
     this.pSys.initSpringTet(this.partCount, this.forces, this.walls);
 
     this.vboContents = this.pSys.S0;

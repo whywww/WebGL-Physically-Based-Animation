@@ -7,7 +7,8 @@ F_SPRING = 4;   // ties together 2 particles; distance sets force
 F_SPRING_SNAKE = 5;
 F_SPRING_TET = 6;
 F_WIND = 7;     // Blowing-wind-like force-field;fcn of 3D position
-F_MAXKINDS = 8; // 'max' is always the LAST name in our list;
+F_TORNADO = 8;
+F_MAXKINDS = 9; // 'max' is always the LAST name in our list;
 
 class CForcer {
     forceType;  // sets the kind of force this object describes
@@ -28,6 +29,10 @@ class CForcer {
     // Wind
     D_wind = 1; 
     v_wind = [1.0, 0.0, 0.0];
+
+    // Tornado
+    T_strength = 1;
+    T_center = [0,0,0];
 
     constructor(forceType){
         this.forceType = forceType;

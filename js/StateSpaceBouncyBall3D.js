@@ -1,16 +1,20 @@
 var gl;
 var g_canvas;
 
+// conditionals
 control0 = 1;
 control1 = 0;
 control2 = 0;
-control3 = 1;
+control3 = 0;
+control4 = 1;
+var hasWall = true;
+var hasBall = true;
 
 worldBox = new VBObox1();
 partBox1 = new VBObox2();
 partBox2 = new VBObox3();
 partBox3 = new VBObox4();
-
+partBox4 = new VBObox5();
 
 var g_timeStep = 1000.0/60.0;  // milliseconds
 var g_timeStepMin = g_timeStep;
@@ -54,6 +58,7 @@ function main() {
     partBox1.init(gl);
     partBox2.init(gl);
     partBox3.init(gl);
+    partBox4.init(gl);
 
     // Event register
     window.addEventListener("mousedown", myMouseDown);
@@ -64,30 +69,37 @@ function main() {
     // Dat.gui
     var GUIContent = function() {
         this.solver = 'Midpoint';
-        this.wallElasticity = elasticity;
+        this.hasWalls = hasWall;
+        this.wallElasticity = Kbouncy;
+        this.hasGreenBall = hasBall;
         this.greenBallRadius = pBallRadius;
     };
     var BallContent = function(){
-        this.switchToMe = function(){control1 = 1; control2 = 0; control3 = 0};
-        this.wind = isWind;
+        this.switchToMe = function(){control1 = 1; control2 = 0; control3 = 0; control4 = 0;};
+        this.tornado = false;
+        this.wind = false;
         this.windVelocity = windVel[0];
     };
+    var FireContent = function(){
+        this.switchToMe = function(){control4 = 1; control1 = 0; control2 = 0; control3 = 0;};
+    }
     var SpringContent = function(){
         this.springLength = springLen;
         this.stiffness = springStiffness;
         this.damping = springDamp;
     };
     var SnakeContent = function(){
-        this.switchToMe = function(){control2 = 1; control1 = 0; control3 = 0;};
+        this.switchToMe = function(){control2 = 1; control1 = 0; control3 = 0; control4 = 0;};
         this.toggleFixedPoint = function(){isFixed = !isFixed;};
         this.number = partBox2.pSys.partCount;
     };
     var TetContent = function(){
-        this.switchToMe = function(){control3 = 1; control1 = 0; control2 = 0;}
+        this.switchToMe = function(){control3 = 1; control1 = 0; control2 = 0; control4 = 0;}
     };
 
     var text = new GUIContent();
     var balltext = new BallContent();
+    var fireText = new FireContent();
     var springText = new SpringContent();
     var snakeText = new SnakeContent();
     var tetText = new TetContent();
@@ -100,14 +112,33 @@ function main() {
         else if (val == 'Midpoint') solverType = SOLV_MIDPOINT;
         else if (val == 'MyMethod') solverType = SOLV_ME;
     }).listen();
-    gui.add(text, 'wallElasticity').onChange(function(val){elasticity = val;});
+    gui.add(text, 'hasWalls').onChange(function(val){
+        hasWall = val;
+        partBox1.pSys.removeAddWall([WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_YWALL_LO, WTYPE_YWALL_HI,  WTYPE_ZWALL_LO, WTYPE_ZWALL_HI]);
+        partBox2.pSys.removeAddWall([WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_YWALL_LO, WTYPE_YWALL_HI,  WTYPE_ZWALL_LO, WTYPE_ZWALL_HI]);
+        partBox3.pSys.removeAddWall([WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_YWALL_LO, WTYPE_YWALL_HI,  WTYPE_ZWALL_LO, WTYPE_ZWALL_HI]);
+        partBox4.pSys.removeAddWall([WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_YWALL_LO, WTYPE_YWALL_HI,  WTYPE_ZWALL_LO, WTYPE_ZWALL_HI]);
+    });
+    gui.add(text, 'wallElasticity').min(0).max(1).onChange(function(val){Kbouncy = val;});
+    gui.add(text, 'hasGreenBall').onChange(function(val){
+        hasBall = val;
+        partBox1.pSys.removeAddWall([WTYPE_PBALL]);
+        partBox2.pSys.removeAddWall([WTYPE_PBALL]);
+        partBox3.pSys.removeAddWall([WTYPE_PBALL]);
+        partBox4.pSys.removeAddWall([WTYPE_PBALL]);
+    });
     gui.add(text, 'greenBallRadius').onChange(function(val){pBallRadius = val;});
 
     var ball = gui.addFolder('Ball');
     ball.add(balltext, 'switchToMe');
-    ball.add(balltext, 'wind').onChange(function(){isWind = !isWind;});
+    ball.add(balltext, 'tornado').onChange(function(){partBox1.pSys.removeAddForce([F_TORNADO]); partBox1.pSys.removeAddWall([WTYPE_TORNADO])});
+    ball.add(balltext, 'wind').onChange(function(){partBox1.pSys.removeAddForce([F_WIND]);});
     ball.add(balltext, 'windVelocity').onChange(function(val){windVel[0] = val;});
     ball.open();
+
+    var fire = gui.addFolder('Fire');
+    fire.add(fireText, 'switchToMe');
+    fire.open();
 
     var spring = gui.addFolder('Spring');
     spring.add(springText, 'springLength').onChange(function(val){springLen = val});
@@ -152,9 +183,7 @@ function animate() {
 
 
 function drawAll() {
-    // if (isClear){
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    // }
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // 3D view setup
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight); 
@@ -182,6 +211,11 @@ function drawAll() {
         partBox3.switchToMe();
         partBox3.adjust();
         partBox3.draw();     
+    }
+    if (control4){  // fire
+        partBox4.switchToMe();
+        partBox4.adjust();
+        partBox4.draw();     
     }
 }
 
@@ -424,37 +458,39 @@ function drawAxis(modelMatrix, u_ModelMatrix){
 
 
 function drawCube(modelMatrix, u_ModelMatrix){
-	modelMatrix.rotate(90, 1.0, 0.0, 0.0); // rotate ball axis
+    if (hasWall){
 
-    pushMatrix(modelMatrix);
-    modelMatrix.scale(2.0, 1.8, 1.0);
-    modelMatrix.translate(-0.5, 0.0, 2.0);
-    gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
-    gl.drawArrays(gl.TRIANGLE_FAN, cubeStart/floatsPerVertex, cubeVerts.length/floatsPerVertex);
+        modelMatrix.rotate(90, 1.0, 0.0, 0.0); // rotate ball axis
 
-    modelMatrix = popMatrix();
-    pushMatrix(modelMatrix);
-    modelMatrix.scale(1.0, 1.8, 10.0);
-    modelMatrix.translate(-1.0, 0.0, 0.2);
-    modelMatrix.rotate(90.0, 0.0, 1.0, 0.0);
-    gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
-    gl.drawArrays(gl.TRIANGLE_FAN, cubeStart/floatsPerVertex, cubeVerts.length/floatsPerVertex);
+        pushMatrix(modelMatrix);
+        modelMatrix.scale(2.0, 1.8, 1.0);
+        modelMatrix.translate(-0.5, 0.0, 2.0);
+        gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
+        gl.drawArrays(gl.TRIANGLE_FAN, cubeStart/floatsPerVertex, cubeVerts.length/floatsPerVertex);
 
-    modelMatrix = popMatrix();
-    pushMatrix(modelMatrix);
-    modelMatrix.scale(1.0, 1.8, 10.0);
-    modelMatrix.translate(1.0, 0.0, 0.2);
-    modelMatrix.rotate(90.0, 0.0, 1.0, 0.0);
-    gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
-    gl.drawArrays(gl.TRIANGLE_FAN, cubeStart/floatsPerVertex, cubeVerts.length/floatsPerVertex);
+        modelMatrix = popMatrix();
+        pushMatrix(modelMatrix);
+        modelMatrix.scale(1.0, 1.8, 10.0);
+        modelMatrix.translate(-1.0, 0.0, 0.2);
+        modelMatrix.rotate(90.0, 0.0, 1.0, 0.0);
+        gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
+        gl.drawArrays(gl.TRIANGLE_FAN, cubeStart/floatsPerVertex, cubeVerts.length/floatsPerVertex);
 
-    modelMatrix = popMatrix();
-    modelMatrix.scale(4.0, 1.0, 10.0);
-    modelMatrix.translate(-0.5, 1.8, -0.2);
-    modelMatrix.rotate(90.0, 1.0, 0.0, 0.0);
-    gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
-    gl.drawArrays(gl.TRIANGLE_FAN, cubeStart/floatsPerVertex, cubeVerts.length/floatsPerVertex);   
+        modelMatrix = popMatrix();
+        pushMatrix(modelMatrix);
+        modelMatrix.scale(1.0, 1.8, 10.0);
+        modelMatrix.translate(1.0, 0.0, 0.2);
+        modelMatrix.rotate(90.0, 0.0, 1.0, 0.0);
+        gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
+        gl.drawArrays(gl.TRIANGLE_FAN, cubeStart/floatsPerVertex, cubeVerts.length/floatsPerVertex);
 
+        modelMatrix = popMatrix();
+        modelMatrix.scale(4.0, 1.0, 10.0);
+        modelMatrix.translate(-0.5, 1.8, -0.2);
+        modelMatrix.rotate(90.0, 1.0, 0.0, 0.0);
+        gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
+        gl.drawArrays(gl.TRIANGLE_FAN, cubeStart/floatsPerVertex, cubeVerts.length/floatsPerVertex);   
+    }
 }
 
 
@@ -489,10 +525,12 @@ function drawSpring(pSys, modelMatrix, u_ModelMatrix){
 
 
 function drawSphere(modelMatrix, u_ModelMatrix){
-    modelMatrix.translate(pBallCenter[0], pBallCenter[1], pBallCenter[2]);
-    modelMatrix.scale(pBallRadius, pBallRadius, pBallRadius);
-    gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
-    gl.drawArrays(gl.TRIANGLE_STRIP, sphStart/floatsPerVertex, sphVerts.length/floatsPerVertex);
+    if (hasBall){
+        modelMatrix.translate(pBallCenter[0], pBallCenter[1], pBallCenter[2]);
+        modelMatrix.scale(pBallRadius, pBallRadius, pBallRadius);
+        gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
+        gl.drawArrays(gl.TRIANGLE_STRIP, sphStart/floatsPerVertex, sphVerts.length/floatsPerVertex);
+    }
 }
 
 
@@ -610,33 +648,25 @@ function myKeyDown(ev) {
         case "Space":
             runMode = 2;
             break;
-        
-        case "KeyF":
-            // Fountain
-            if(isFountain == 0)
-                isFountain = 1;
-            else
-                isFountain = 0;
+
+        case "KeyA":
+            T_center[0] += 0.1;
             break;
 
-        case "KeyX":
-            if (control1 & !control2){
-                control1 = 0;
-                control2 = 1;
-            }
-            else{
-                control1 = 1;
-                control2 = 0;
-            }
+        case "KeyW":
+            T_center[1] -= 0.1;
             break;
 
         case "KeyS":
-            // change solver
-            solverType++;
-            if (solverType >= SOLV_MAX){
-                solverType = 0;
-            } 
+            T_center[1] += 0.1;
             break;
+
+        case "KeyD":
+            T_center[0] -= 0.1;
+            break;
+        
+        case "KeyF":
+            isFountain = !isFountain;
 
         default:
             break;

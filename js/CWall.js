@@ -8,18 +8,21 @@ WTYPE_ZWALL_LO = 6
 WTYPE_ZWALL_HI = 7;
 WTYPE_ANCHOR = 8;       // Lock one particle at location xpos,ypos,zpos
 WTYPE_STICK = 9;
-WTYPE_AGE = 10;
+WTYPE_TORNADO = 10;
+WTYPE_FIRE = 11;
 WTYPE_PBALL = 12;       // solid sphere centered at particle with index e0;
 WTYPE_MAXVAR = 13;     
 
-var elasticity = 1.0;
-var pBallRadius = 0.2;
-var pBallCenter = [0.0, 0.0, 1.0];
+var Kbouncy = 1.0;  // Coeff. of restoration for constraint surfaces
+var pBallRadius = 0.1;  // constraint ball radius
+var pBallCenter = [0.0, 0.0, 1.0];  // constraint ball center
+var ballRadius = 0.05;  // radius of particle balls
+
 
 class CWall {
     wallType;
-    Kbouncy = elasticity;  // Coeff. of restoration for constraint surfaces
-    
+    Kbouncy = 1.0;
+
     xpos = 0.0; ypos = ballRadius; zpos = ballRadius; 
     xmin = -1.0+ballRadius; xmax = 1.0-ballRadius; ymin = -2.0+ballRadius; ymax = 1-ballRadius; zmin = 0.0+ballRadius; zmax = 1.8-ballRadius;
     wallSize = 0;   // limit on size of WTYPE_WALL constraints; wall

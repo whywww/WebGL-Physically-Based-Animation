@@ -2,11 +2,11 @@ var gl;
 var g_canvas;
 
 // conditionals
-control0 = 1;
-control1 = 0;
-control2 = 0;
-control3 = 0;
-control4 = 1;
+control0 = true;
+control1 = false;
+control2 = false;
+control3 = false;
+control4 = true;
 var hasWall = true;
 var hasBall = true;
 
@@ -16,7 +16,7 @@ partBox2 = new VBObox3();
 partBox3 = new VBObox4();
 partBox4 = new VBObox5();
 
-var g_timeStep = 1000.0/60.0;  // milliseconds
+var g_timeStep = 1000.0/100.0;  // milliseconds
 var g_timeStepMin = g_timeStep;
 var g_timeStepMax = g_timeStep;
 var g_stepCount = 0;
@@ -25,7 +25,7 @@ var g_last = Date.now();
 
 // View & Projection
 var eyeX = 0.0;
-var eyeY = 4.5;
+var eyeY = 5.5;
 var eyeZ = 1.0;
 var atX = 0.0;
 var atY = 0;
@@ -68,33 +68,36 @@ function main() {
     
     // Dat.gui
     var GUIContent = function() {
-        this.solver = 'Midpoint';
+        this.solver = 'Explicit-Midpoint';
         this.hasWalls = hasWall;
         this.wallElasticity = Kbouncy;
         this.hasGreenBall = hasBall;
         this.greenBallRadius = pBallRadius;
     };
     var BallContent = function(){
-        this.switchToMe = function(){control1 = 1; control2 = 0; control3 = 0; control4 = 0;};
+        this.toggleMe = function(){control1 = !control1;};
         this.tornado = false;
         this.wind = false;
         this.windVelocity = windVel[0];
+        this.boid = false;
     };
     var FireContent = function(){
-        this.switchToMe = function(){control4 = 1; control1 = 0; control2 = 0; control3 = 0;};
-    }
+        this.toggleMe = function(){control4 = !control4;};
+    };
     var SpringContent = function(){
         this.springLength = springLen;
         this.stiffness = springStiffness;
         this.damping = springDamp;
+        this.gravity = false;
+        this.mass = sprMass;
     };
     var SnakeContent = function(){
-        this.switchToMe = function(){control2 = 1; control1 = 0; control3 = 0; control4 = 0;};
+        this.toggleMe = function(){control2 = !control2;};
         this.toggleFixedPoint = function(){isFixed = !isFixed;};
         this.number = partBox2.pSys.partCount;
     };
     var TetContent = function(){
-        this.switchToMe = function(){control3 = 1; control1 = 0; control2 = 0; control4 = 0;}
+        this.toggleMe = function(){control3 = !control3;}
     };
 
     var text = new GUIContent();
@@ -106,11 +109,15 @@ function main() {
     var gui = new dat.GUI();
 
 
-    gui.add(text, 'solver', ['Euler', 'Implicit', 'Midpoint', 'MyMethod']).onChange(function(val){
+    gui.add(text, 'solver', ['Euler', 'Implicit-Euler', 'Explicit-Midpoint', 'Iter-Implicit-Euler', 'Iter-Implicit-Midpoint', 'Adams-Bashforth', 'Velocity-Verlet', 'Semi-Implicit']).onChange(function(val){
         if (val == 'Euler') solverType = SOLV_EULER;
-        else if (val == 'Implicit') solverType = SOLV_IMPLICIT;
-        else if (val == 'Midpoint') solverType = SOLV_MIDPOINT;
-        else if (val == 'MyMethod') solverType = SOLV_ME;
+        else if (val == 'Implicit-Euler') solverType = SOLV_IM_EULER;
+        else if (val == 'Explicit-Midpoint') solverType = SOLV_EX_MIDPOINT;
+        else if (val == 'Iter-Implicit-Euler') solverType = SOLV_ITER_IM_EULER;
+        else if (val == 'Iter-Implicit-Midpoint') solverType = SOLV_ITER_IM_MIDPOINT;
+        else if (val == 'Adams-Bashforth') solverType = SOLV_ADAMS_BASHFORTH;
+        else if (val == 'Velocity-Verlet') solverType = SOLV_VEL_VERLET;
+        else if (val == 'Semi-Implicit') solverType = SOLV_ME;
     }).listen();
     gui.add(text, 'hasWalls').onChange(function(val){
         hasWall = val;
@@ -130,41 +137,47 @@ function main() {
     gui.add(text, 'greenBallRadius').onChange(function(val){pBallRadius = val;});
 
     var ball = gui.addFolder('Ball');
-    ball.add(balltext, 'switchToMe');
+    ball.add(balltext, 'toggleMe');
+    ball.add(balltext, 'boid').onChange(function(){partBox1.pSys.removeAddForce([F_FLOCK, F_GRAV_E, F_DRAG]);});
     ball.add(balltext, 'tornado').onChange(function(){partBox1.pSys.removeAddForce([F_TORNADO]); partBox1.pSys.removeAddWall([WTYPE_TORNADO])});
     ball.add(balltext, 'wind').onChange(function(){partBox1.pSys.removeAddForce([F_WIND]);});
     ball.add(balltext, 'windVelocity').onChange(function(val){windVel[0] = val;});
     ball.open();
 
     var fire = gui.addFolder('Fire');
-    fire.add(fireText, 'switchToMe');
+    fire.add(fireText, 'toggleMe');
     fire.open();
 
     var spring = gui.addFolder('Spring');
     spring.add(springText, 'springLength').onChange(function(val){springLen = val});
     spring.add(springText, 'stiffness').onChange(function(val){springStiffness = val});
     spring.add(springText, 'damping', 0.01, 1).onChange(function(val){springDamp = val});
+    spring.add(springText, 'gravity').onChange(function(){partBox2.pSys.removeAddForce([F_DRAG, F_GRAV_E]); partBox3.pSys.removeAddForce([F_DRAG, F_GRAV_E]);});
+    spring.add(springText, 'mass').onChange(function(val){sprMass = val;})
     spring.open();
 
     var sprSnake = spring.addFolder('springSnake');
-    sprSnake.add(snakeText, 'switchToMe');
+    sprSnake.add(snakeText, 'toggleMe');
     sprSnake.add(snakeText, 'toggleFixedPoint');
     sprSnake.add(snakeText, 'number').min(1).max(10).step(1).onChange(function(val){partBox2.pSys.partCount = val;});
     sprSnake.open();
 
     var sprTet = spring.addFolder('SpringTetrahedron');
-    sprTet.add(tetText, 'switchToMe');
+    sprTet.add(tetText, 'toggleMe');
     sprTet.open();
 
     gl.clearColor(0.3, 0.3, 0.3, 1);
     gl.enable(gl.DEPTH_TEST); 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    gl.enable( gl.BLEND );
+    gl.blendFunc( gl.SRC_COLOR, gl.ONE_MINUS_SRC_ALPHA );
+
     vpMatrix = new Matrix4();
 
     var tick = function() {
         g_timeStep = animate();
-        drawAll();
+        drawResize();
         requestAnimationFrame(tick, g_canvas);
     };
     tick();
@@ -179,6 +192,17 @@ function animate() {
     if (elapsed < g_timeStepMin) g_timeStepMin = elapsed;
     else if (elapsed > g_timeStepMax) g_timeStepMax = elapsed;
     return elapsed;
+}
+
+
+function drawResize(){
+    var nuCanvas = document.getElementById('webgl');	// get current canvas
+    var nuGl = getWebGLContext(nuCanvas);
+    
+    nuCanvas.width = innerWidth - 16;
+    nuCanvas.height = innerHeight*3/4 - 16;
+
+    drawAll(nuGl);
 }
 
 
@@ -225,8 +249,8 @@ function makeGroundGrid() {
 	var xcount = 100;
 	var ycount = 100;
 	var xymax	= 50.0;
-	var xColr = new Float32Array([1.0, 1.0, 0.3]);
-	var yColr = new Float32Array([0.5, 1.0, 0.5]);
+	var xColr = new Float32Array([0.8, 0.5, 0.8, 0.5]);
+	var yColr = new Float32Array([0.8, 0.5, 0.8, 0.5]);
 
 	gndVerts = new Float32Array(floatsPerVertex*2*(xcount+ycount));
 						
@@ -248,7 +272,8 @@ function makeGroundGrid() {
 		}
 		gndVerts[j+4] = xColr[0];
 		gndVerts[j+5] = xColr[1];
-		gndVerts[j+6] = xColr[2];
+        gndVerts[j+6] = xColr[2];
+		gndVerts[j+7] = xColr[3];
 	}
 
 	for(v=0; v<2*ycount; v++, j+= floatsPerVertex) {
@@ -266,31 +291,32 @@ function makeGroundGrid() {
 		}
 		gndVerts[j+4] = yColr[0];
 		gndVerts[j+5] = yColr[1];
-		gndVerts[j+6] = yColr[2];
+        gndVerts[j+6] = yColr[2];
+		gndVerts[j+7] = yColr[3];
 	}
 }
 
 
 function makeAxis(){
     axisVerts = new Float32Array([
-        0.0,  0.0,  0.0, 1.0,		0.3,  0.3,  0.3,	// X axis line (origin: gray)
-        3.3,  0.0,  0.0, 1.0,		1.0,  0.3,  0.3,	// 						 (endpoint: red)
+        0.0,  0.0,  0.0, 1.0,		0.3,  0.3,  0.3, 1.0,	// X axis line (origin: gray)
+        3.3,  0.0,  0.0, 1.0,		1.0,  0.3,  0.3, 1.0,	// 						 (endpoint: red)
 		 
-        0.0,  0.0,  0.0, 1.0,       0.3,  0.3,  0.3,	// Y axis line (origin: white)
-        0.0,  3.3,  0.0, 1.0,		0.3,  1.0,  0.3,	//						 (endpoint: green)
+        0.0,  0.0,  0.0, 1.0,       0.3,  0.3,  0.3, 1.0,	// Y axis line (origin: white)
+        0.0,  3.3,  0.0, 1.0,		0.3,  1.0,  0.3, 1.0,	//						 (endpoint: green)
 
-        0.0,  0.0,  0.0, 1.0,		0.3,  0.3,  0.3,	// Z axis line (origin:white)
-        0.0,  0.0,  3.3, 1.0,		0.3,  0.3,  1.0,	//						 (endpoint: blue)
+        0.0,  0.0,  0.0, 1.0,		0.3,  0.3,  0.3, 1.0,	// Z axis line (origin:white)
+        0.0,  0.0,  3.3, 1.0,		0.3,  0.3,  1.0, 1.0	//						 (endpoint: blue)
     ]);
 }
 
 
 function makeCube(){
     cubeVerts = new Float32Array([
-        0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0,
-        0.0, 1.0, 0.0, 1.0, 0.3, 0.3, 0.3,
-        1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0,
-        1.0, 0.0, 0.0, 1.0, 0.3, 0.3, 0.3,
+        0.0, 0.0, 0.0, 1.0, 0.2, 0.0, 0.5, 0.1,
+        0.0, 1.0, 0.0, 1.0, 0.7, 0.7, 0.7, 0.1,
+        1.0, 1.0, 0.0, 1.0, 0.2, 0.0, 0.5, 0.1,
+        1.0, 0.0, 0.0, 1.0, 0.7, 0.7, 0.7, 0.1
     ]);
 }
 
@@ -350,9 +376,9 @@ function makeSphere() {
     var slices =12;		
     var sliceVerts	= 21;
 
-    var topColr = new Float32Array([0.0, 0.5, 0.0]);
-    var botColr = new Float32Array([0.0, 0.7, 0.0]);
-    var errColr = new Float32Array([0.0, 0.5, 0.0]);
+    var topColr = new Float32Array([0.0, 0.5, 0.0, 1.0]);
+    var botColr = new Float32Array([0.0, 0.7, 0.0, 1.0]);
+    var errColr = new Float32Array([0.0, 0.5, 0.0, 1.0]);
     var sliceAngle = Math.PI/slices;	
 
     sphVerts = new Float32Array(((slices*2*sliceVerts)-2) * floatsPerVertex);
@@ -395,22 +421,26 @@ function makeSphere() {
             if(v==0) { 	
                 sphVerts[j+4]=errColr[0]; 
                 sphVerts[j+5]=errColr[1]; 
-                sphVerts[j+6]=errColr[2];				
+                sphVerts[j+6]=errColr[2];
+                sphVerts[j+7]=errColr[3];				
                 }
             else if(isFirstSlice==1) {	
                 sphVerts[j+4]=botColr[0]; 
                 sphVerts[j+5]=botColr[1]; 
                 sphVerts[j+6]=botColr[2];	
+                sphVerts[j+7]=errColr[3];				
                 }
             else if(isLastSlice==1) {
                 sphVerts[j+4]=topColr[0]; 
                 sphVerts[j+5]=topColr[1]; 
                 sphVerts[j+6]=topColr[2];	
+                sphVerts[j+7]=topColr[3];	
             }
             else {	
-                    sphVerts[j+4]= 0.0; 
-                    sphVerts[j+5]= 0.5;	
-                    sphVerts[j+6]= 0.0;	
+                sphVerts[j+4]= 0.0; 
+                sphVerts[j+5]= 0.5;	
+                sphVerts[j+6]= 0.0;	
+                sphVerts[j+7]= 1.0;	
             }
         }
     }
@@ -462,31 +492,35 @@ function drawCube(modelMatrix, u_ModelMatrix){
 
         modelMatrix.rotate(90, 1.0, 0.0, 0.0); // rotate ball axis
 
+        // back
         pushMatrix(modelMatrix);
         modelMatrix.scale(2.0, 1.8, 1.0);
         modelMatrix.translate(-0.5, 0.0, 2.0);
         gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
         gl.drawArrays(gl.TRIANGLE_FAN, cubeStart/floatsPerVertex, cubeVerts.length/floatsPerVertex);
 
+        // right
         modelMatrix = popMatrix();
         pushMatrix(modelMatrix);
-        modelMatrix.scale(1.0, 1.8, 10.0);
-        modelMatrix.translate(-1.0, 0.0, 0.2);
+        modelMatrix.scale(1.0, 1.8, 5.0);
+        modelMatrix.translate(-1.0, 0.0, 0.4);
         modelMatrix.rotate(90.0, 0.0, 1.0, 0.0);
         gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
         gl.drawArrays(gl.TRIANGLE_FAN, cubeStart/floatsPerVertex, cubeVerts.length/floatsPerVertex);
 
+        // left
         modelMatrix = popMatrix();
         pushMatrix(modelMatrix);
-        modelMatrix.scale(1.0, 1.8, 10.0);
-        modelMatrix.translate(1.0, 0.0, 0.2);
+        modelMatrix.scale(1.0, 1.8, 5.0);
+        modelMatrix.translate(1.0, 0.0, 0.4);
         modelMatrix.rotate(90.0, 0.0, 1.0, 0.0);
         gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
         gl.drawArrays(gl.TRIANGLE_FAN, cubeStart/floatsPerVertex, cubeVerts.length/floatsPerVertex);
 
+        // up
         modelMatrix = popMatrix();
-        modelMatrix.scale(4.0, 1.0, 10.0);
-        modelMatrix.translate(-0.5, 1.8, -0.2);
+        modelMatrix.scale(2.0, 1.8, 5.0);
+        modelMatrix.translate(-0.5, 1.0, -0.6);
         modelMatrix.rotate(90.0, 1.0, 0.0, 0.0);
         gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
         gl.drawArrays(gl.TRIANGLE_FAN, cubeStart/floatsPerVertex, cubeVerts.length/floatsPerVertex);   
@@ -585,24 +619,24 @@ function myKeyDown(ev) {
             atZ += 0.1*Math.cos(theta*Math.PI/180) * tan;
             break;
 
-        case "KeyI":
+        case "KeyW":
             // camera move up
             atZ += 0.1;  // tilt
             break;
 
-        case "KeyK":
+        case "KeyS":
             // camera move down
 			atZ -= 0.1;  // tilt
             break;
 
-        case "KeyJ":
+        case "KeyA":
             // camera look left
             theta += 2;
             atX = eyeX + r*Math.sin(theta*Math.PI/180);
             atY = eyeY - r*Math.cos(theta*Math.PI/180);
             break;
 
-        case "KeyL":
+        case "KeyD":
             // camera look right
             theta -= 2;
             atX = eyeX + r*Math.sin(theta*Math.PI/180);
@@ -631,15 +665,6 @@ function myKeyDown(ev) {
             }
             break;
         
-        case "KeyC":
-            // toggle clear screen
-            if (isClear){
-                isClear = 0;
-            }else{
-                isClear = 1;
-            }
-            break;
-        
         case "KeyP":
             if (runMode == 3) runMode = 1;
             else runMode = 3;
@@ -648,25 +673,6 @@ function myKeyDown(ev) {
         case "Space":
             runMode = 2;
             break;
-
-        case "KeyA":
-            T_center[0] += 0.1;
-            break;
-
-        case "KeyW":
-            T_center[1] -= 0.1;
-            break;
-
-        case "KeyS":
-            T_center[1] += 0.1;
-            break;
-
-        case "KeyD":
-            T_center[0] -= 0.1;
-            break;
-        
-        case "KeyF":
-            isFountain = !isFountain;
 
         default:
             break;
@@ -706,12 +712,7 @@ function myMouseMove(ev){
  
     xMdragTot = (x - xMclik);
     yMdragTot = (y - yMclik);
-    
-    // if (control3){
-    //     var pSys = partBox3.pSys;
-    //     pSys.S0[PART_XPOS] -= (x - xMclik);
-    //     pSys.S0[PART_ZPOS] += (y - yMclik);  
-    // }
+
     pBallCenter[0] -= (x - xMclik);
     pBallCenter[2] += (y - yMclik);
     

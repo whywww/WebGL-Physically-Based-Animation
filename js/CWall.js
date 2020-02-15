@@ -7,7 +7,7 @@ WTYPE_YWALL_HI = 5;
 WTYPE_ZWALL_LO = 6
 WTYPE_ZWALL_HI = 7;
 WTYPE_ANCHOR = 8;       // Lock one particle at location xpos,ypos,zpos
-WTYPE_STICK = 9;
+WTYPE_SEPERATE = 9;        // Connects 2 particles with fixed-length separation
 WTYPE_TORNADO = 10;
 WTYPE_FIRE = 11;
 WTYPE_PBALL = 12;       // solid sphere centered at particle with index e0;
@@ -30,10 +30,6 @@ class CWall {
                 // point at xpos,ypos,zpos.  If wallSize <= 0.0,
                 // then wall size is unlimited.
     nx; ny; nz;
-    partSetSize = 0;    // How many particles affected by this CWall object.
-    //                 // -- 0 == 'all particles'
-    //                 // -- 1 == one particle; e0 holds its index number.
-    //                 // -- 2 == two particles; e0,e1 holds index numbers.
 
     constructor(wallType){
         this.wallType = wallType;

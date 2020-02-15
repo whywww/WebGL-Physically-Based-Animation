@@ -1,4 +1,4 @@
-var floatsPerVertex = 7;
+var floatsPerVertex = 8;
 var flameSize = 5;
 
 /****************** VBObox1 ***********************/
@@ -10,14 +10,14 @@ function VBObox1(){
     'uniform mat4 u_ModelMatrix;\n' +
 
     'attribute vec4 a_Position;\n' +
-    'attribute vec3 a_Color;\n' +
+    'attribute vec4 a_Color;\n' +
 
     'varying vec4 v_Color; \n' +
 
     'void main() {\n' +
     '   gl_PointSize = 20.0;\n' + 
     '   gl_Position = u_ModelMatrix * a_Position; \n' +
-    '	v_Color = vec4(a_Color, 1.0); \n' +	
+    '	v_Color = a_Color; \n' +	
     '} \n';
 
     this.FRAG_SRC = 
@@ -61,7 +61,7 @@ function VBObox1(){
     this.vboStride = this.vboBytes / this.vboVerts; 
     
     this.vboFcount_a_Pos =  4;
-    this.vboFcount_a_Colr = 3;
+    this.vboFcount_a_Colr = 4;
     
     console.assert((this.vboFcount_a_Pos + 
         this.vboFcount_a_Colr) * 
@@ -188,14 +188,14 @@ function VBObox2(){
     'uniform mat4 u_ModelMatrix;\n' +
 
     'attribute vec4 a_Position;\n' +
-    'attribute vec3 a_Color;\n' +
+    'attribute vec4 a_Color;\n' +
 
     'varying vec4 v_Color; \n' +
 
     'void main() {\n' +
     '   gl_PointSize = 8.0;\n' + 
     '   gl_Position = u_ModelMatrix * a_Position; \n' +
-    '	v_Color = vec4(a_Color, 1.0); \n' +	
+    '	v_Color = a_Color; \n' +	
     '} \n';
 
     this.FRAG_SRC = 
@@ -204,7 +204,7 @@ function VBObox2(){
     'void main() {\n' +
     '		float dist = distance(gl_PointCoord, vec2(0.5, 0.5)); \n' +
     '		if(dist < 0.5) { \n' +	
-    '			gl_FragColor = vec4((1.0-2.0*dist)*v_Color.rgb, 1.0);\n' +
+    '			gl_FragColor = v_Color;\n' +
     '    	}\n' +
     '		else { \n' + 
     '			discard;\n' +
@@ -212,7 +212,7 @@ function VBObox2(){
     '}\n';
     // initiate particle system
     this.pSys = new CPartSys();
-    this.partCount = 1000;
+    this.partCount = 600;
     this.forces = [F_NONE, F_GRAV_E, F_DRAG];
     this.walls = [WTYPE_GROUND, WTYPE_PBALL, WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_YWALL_LO, WTYPE_YWALL_HI,  WTYPE_ZWALL_LO, WTYPE_ZWALL_HI];
     this.pSys.initBouncyBall(this.partCount, this.forces, this.walls);
@@ -224,7 +224,7 @@ function VBObox2(){
     this.vboStride = this.vboBytes / this.vboVerts; 
     
     this.vboFcount_a_Pos = 4;
-    this.vboFcount_a_Colr = 3;
+    this.vboFcount_a_Colr = 4;
 
     console.assert(PART_MAXVAR * this.FSIZE == this.vboStride, 
         "Uh oh! VBObox2.vboStride disagrees with attribute-size values!");
@@ -362,14 +362,14 @@ function VBObox3(){
     'uniform mat4 u_ModelMatrix;\n' +
 
     'attribute vec4 a_Position;\n' +
-    'attribute vec3 a_Color;\n' +
+    'attribute vec4 a_Color;\n' +
 
     'varying vec4 v_Color; \n' +
 
     'void main() {\n' +
     '   gl_PointSize = 20.0;\n' + 
     '   gl_Position = u_ModelMatrix * a_Position; \n' +
-    '	v_Color = vec4(a_Color, 1.0); \n' +	
+    '	v_Color = a_Color; \n' +	
     '} \n';
 
     this.FRAG_SRC = 
@@ -394,10 +394,6 @@ function VBObox3(){
     '   }\n'+
     '}\n';
 
-    this.indices = new Uint8Array([
-        0,3
-    ]);
-
     // initiate spring system
     this.pSys = new CPartSys();
     this.partCount = 10;
@@ -412,7 +408,7 @@ function VBObox3(){
     this.vboStride = this.vboBytes / this.vboVerts; 
     
     this.vboFcount_a_Pos = 4;
-    this.vboFcount_a_Colr = 3;
+    this.vboFcount_a_Colr = 4;
 
     console.assert(PART_MAXVAR * this.FSIZE == this.vboStride, 
         "Uh oh! VBObox3.vboStride disagrees with attribute-size values!");
@@ -447,11 +443,6 @@ VBObox3.prototype.init = function(){
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vboLoc);  // Specify purpose of the VBO
     gl.bufferData(gl.ARRAY_BUFFER, this.vboContents, gl.DYNAMIC_DRAW);  
-
-    // element buffer
-    this.vboEleLoc = gl.createBuffer();	
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vboEleLoc);  // Specify purpose of the VBO
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indices, gl.DYNAMIC_DRAW);  
 
     // c) Find GPU locations for vars 
     this.a_PosLoc = gl.getAttribLocation(this.shaderLoc, 'a_Position');
@@ -530,8 +521,6 @@ VBObox3.prototype.draw = function() {
         this.pSys.drawMe(this.pSys.S0, this.ModelMat, this.u_ModelMatLoc);
         gl.uniform1i(this.u_isPoint, 0);
         gl.drawArrays(gl.LINE_STRIP, 0, this.pSys.partCount);
-        // gl.drawElements(gl.LINE_STRIP, 2, gl.UNSIGNED_BYTE, 0);
-
 
         // 5) Swap
         [this.pSys.S0, this.pSys.S1] = this.pSys.stateVecSwap(this.pSys.S0, this.pSys.S1);
@@ -567,14 +556,14 @@ function VBObox4(){
     'uniform mat4 u_ModelMatrix;\n' +
 
     'attribute vec4 a_Position;\n' +
-    'attribute vec3 a_Color;\n' +
+    'attribute vec4 a_Color;\n' +
 
     'varying vec4 v_Color; \n' +
 
     'void main() {\n' +
     '   gl_PointSize = 20.0;\n' + 
     '   gl_Position = u_ModelMatrix * a_Position; \n' +
-    '	v_Color = vec4(a_Color, 1.0); \n' +	
+    '	v_Color = a_Color; \n' +	
     '} \n';
 
     this.FRAG_SRC = 
@@ -618,7 +607,7 @@ function VBObox4(){
     this.vboStride = this.vboBytes / this.vboVerts; 
     
     this.vboFcount_a_Pos = 4;
-    this.vboFcount_a_Colr = 3;
+    this.vboFcount_a_Colr = 4;
 
     console.assert(PART_MAXVAR * this.FSIZE == this.vboStride, 
         "Uh oh! VBObox4.vboStride disagrees with attribute-size values!");
@@ -771,7 +760,7 @@ function VBObox5(){
     'uniform mat4 u_ModelMatrix;\n' +
 
     'attribute vec4 a_Position;\n' +
-    'attribute vec3 a_Color;\n' +
+    'attribute vec4 a_Color;\n' +
     'attribute float a_PointSize; \n' + 
 
     'varying vec4 v_Color; \n' +
@@ -779,7 +768,7 @@ function VBObox5(){
     'void main() {\n' +
     '   gl_PointSize = a_PointSize;\n' + 
     '   gl_Position = u_ModelMatrix * a_Position; \n' +
-    '	v_Color = vec4(a_Color, 1.0); \n' +	
+    '	v_Color = a_Color; \n' +	
     '} \n';
 
     this.FRAG_SRC = 
@@ -797,19 +786,25 @@ function VBObox5(){
 
     // initiate particle system
     this.pSys = new CPartSys();
-    this.partCount = 1000;
+    this.partCount = 600;
     this.forces = [F_NONE, F_GRAV_E, F_DRAG];
     this.walls = [WTYPE_FIRE, WTYPE_GROUND, WTYPE_PBALL, WTYPE_XWALL_LO, WTYPE_XWALL_HI, WTYPE_YWALL_LO, WTYPE_YWALL_HI,  WTYPE_ZWALL_LO, WTYPE_ZWALL_HI];
     this.pSys.initBouncyBall(this.partCount, this.forces, this.walls);
 
+    // this.vertices = new Float32Array(2*this.pSys.S0.length);
+    // this.vertices.set(this.pSys.S0);
+    // this.vertices.set(this.pSys.S1, this.pSys.S0.length);
+
+    // this.vboContents = this.vertices;
     this.vboContents = this.pSys.S0;
     this.vboVerts = this.pSys.partCount;
 	this.FSIZE = this.vboContents.BYTES_PER_ELEMENT;
     this.vboBytes = this.vboContents.length * this.FSIZE;
-    this.vboStride = this.vboBytes / this.vboVerts; 
+    this.vboStride = this.vboBytes/this.vboVerts;
+    // this.vboStride = this.pSys.S0.length * this.FSIZE; 
     
     this.vboFcount_a_Pos = 4;
-    this.vboFcount_a_Colr = 3;
+    this.vboFcount_a_Colr = 4;
     this.vboFcount_a_PointSize = 1;
 
     console.assert(PART_MAXVAR * this.FSIZE == this.vboStride, 
@@ -877,6 +872,7 @@ VBObox5.prototype.init = function(){
 }
 
 VBObox5.prototype.switchToMe = function() {
+
     gl.useProgram(this.shaderLoc);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vboLoc);
     gl.vertexAttribPointer( this.a_PosLoc,
@@ -914,18 +910,22 @@ VBObox5.prototype.adjust = function() {
 VBObox5.prototype.draw = function() {
     if (runMode > 1){
         if (runMode == 2) runMode = 1;  // do one step
-         // 1) DotFinder(): Find s0Dot from s0 & f0. 
-         this.pSys.applyAllForces(this.pSys.S0, this.pSys.F0);
-         this.pSys.dotMaker(this.pSys.S0dot, this.pSys.S0, g_timeStep);
- 
-         //2) Solver(): Find s1 from s0 & s0dot
-         this.pSys.solver(g_timeStep, this.pSys.S0, this.pSys.S0dot, this.pSys.S1);
- 
-         // 3) Apply all constraints
-         this.pSys.doConstraints(this.pSys.S1, this.pSys.S0, this.pSys.C0);
+        // 1) DotFinder(): Find s0Dot from s0 & f0. 
+        this.pSys.applyAllForces(this.pSys.S0, this.pSys.F0);
+        this.pSys.dotMaker(this.pSys.S0dot, this.pSys.S0, g_timeStep);
+
+        //2) Solver(): Find s1 from s0 & s0dot
+        this.pSys.solver(g_timeStep, this.pSys.S0, this.pSys.S0dot, this.pSys.S1);
+
+        // 3) Apply all constraints
+        this.pSys.doConstraints(this.pSys.S1, this.pSys.S0, this.pSys.C0);
      
          // 4) Render
          this.pSys.drawMe(this.pSys.S0, this.ModelMat, this.u_ModelMatLoc);
+        // gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.pSys.S0, gl.DYNAMIC_DRAW);
+        // gl.bufferSubData(gl.ARRAY_BUFFER, this.pSys.S0.length*this.FSIZE, this.pSys.S1, gl.DYNAMIC_DRAW);
+        // gl.uniformMatrix4fv(this.u_ModelMatLoc, false, this.ModelMat.elements);
+        // gl.drawArrays(gl.LINES, 0, this.partCount*2);
 
         // 5) Swap
         [this.pSys.S0, this.pSys.S1] = this.pSys.stateVecSwap(this.pSys.S0, this.pSys.S1);

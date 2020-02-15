@@ -5,24 +5,24 @@ PTYPE_BALL = 2;   // small bouncy round shiny sphere particle
 PTYPE_MAXVAR = 3;
 
 // Particle Attributes
-PTYPE_DEAD = 0;   // 0: DEAD PARTICLE; 1: ALIVE 
-PART_MASS = 1;
-PART_XPOS = 2;
-PART_YPOS = 3;
-PART_ZPOS = 4;
-PART_WPOS = 5;
-PART_XVEL = 6;
-PART_YVEL = 7;
-PART_ZVEL = 8;
-PART_X_FTOT = 9;
-PART_Y_FTOT = 10;
-PART_Z_FTOT = 11;
-PART_SIZE = 12;
-PART_MAXAGE = 13;
-PART_AGE = 14;  // # of frame-times since creation/initialization
-PART_R = 15;
-PART_G = 16;
-PART_B = 17;
+PART_MASS = 0;
+PART_XPOS = 1;
+PART_YPOS = 2;
+PART_ZPOS = 3;
+PART_WPOS = 4;
+PART_XVEL = 5;
+PART_YVEL = 6;
+PART_ZVEL = 7;
+PART_X_FTOT = 8;
+PART_Y_FTOT = 9;
+PART_Z_FTOT = 10;
+PART_SIZE = 11;
+PART_MAXAGE = 12;
+PART_AGE = 13;  // # of frame-times since creation/initialization
+PART_R = 14;
+PART_G = 15;
+PART_B = 16;
+PART_A = 17;
 PART_MAXVAR = 18;
 
 class CPart{
